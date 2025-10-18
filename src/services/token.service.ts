@@ -92,18 +92,24 @@ class TokenService {
 
   async verifyRefreshToken(token: string): Promise<TokenPayload> {
     try {
-      logger.info('Verifying refresh token:', `${token.substring(0, 8)  }...`);
+      logger.info('Verifying refresh token:', `${token.substring(0, 8)}...`);
       const isBlacklisted = await BlacklistedToken.exists({ token });
       if (isBlacklisted) {
         logger.error('Token is blacklisted');
         throw new UnauthorizedError('Token has been revoked');
       }
 
-      const decoded = jwt.verify(token, this.refreshTokenSecret) as TokenPayload;
+      const decoded = jwt.verify(
+        token,
+        this.refreshTokenSecret
+      ) as TokenPayload;
       logger.info('Token verified successfully for user:', decoded);
       return decoded;
     } catch (error) {
-      logger.error('Token verification failed:', error instanceof Error ? error.message : 'Unknown error');
+      logger.error(
+        'Token verification failed:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
       throw new UnauthorizedError('Invalid refresh token');
     }
   }
@@ -115,7 +121,10 @@ class TokenService {
     });
   }
 
-  async rotateRefreshToken(oldToken: string, payload: TokenPayload): Promise<GeneratedTokens> {
+  async rotateRefreshToken(
+    oldToken: string,
+    payload: TokenPayload
+  ): Promise<GeneratedTokens> {
     const tokens = this.generateTokens(payload);
 
     // Blacklist old token

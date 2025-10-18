@@ -58,7 +58,7 @@ class AssignReviewController {
 
       const manuscript = await Manuscript.findById(manuscriptId).populate({
         path: 'submitter',
-        select: 'assignedFaculty',
+        select: 'name assignedFaculty',
       });
 
       if (!manuscript) {
@@ -80,7 +80,8 @@ class AssignReviewController {
         if (!selectedReviewer) {
           throw new NotFoundError('Selected reviewer not found.');
         }
-        if (existingReviews.some(r => r.reviewer.equals(selectedReviewer!._id))) {
+        const selectedReviewerId: Types.ObjectId = selectedReviewer!._id as Types.ObjectId;
+        if (existingReviews.some(r => r.reviewer.equals(selectedReviewerId))) {
             throw new BadRequestError('This reviewer is already assigned to this manuscript.');
         }
 
@@ -185,7 +186,7 @@ class AssignReviewController {
         await emailService.sendReviewAssignmentEmail(
           selectedReviewer.email,
           manuscript.title || 'Journal Manuscript',
-          selectedReviewer.name,
+          (manuscript.submitter as any).name,
           dueDate
         );
       } catch (error) {

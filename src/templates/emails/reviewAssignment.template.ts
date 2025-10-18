@@ -1,8 +1,8 @@
 import { commonStyles, commonFooter } from './styles';
 
 export const reviewAssignmentTemplate = (
-  proposalTitle: string,
-  researcherName: string,
+  manuscriptTitle: string,
+  authorName: string,
   reviewUrl: string,
   dueDate: Date
 ): string => `
@@ -14,15 +14,15 @@ export const reviewAssignmentTemplate = (
 </head>
 <body>
     <div class="header">
-        <h1>New Research Proposal Assignment</h1>
+        <h1>New Manuscript Assignment</h1>
     </div>
     
     <div class="content">
-        <p>You have been assigned to review a research proposal titled:</p>
+        <p>You have been assigned to review a manuscript titled:</p>
         
-        <div class="proposal-title">"${proposalTitle}"</div>
+        <div class="proposal-title">"${manuscriptTitle}"</div>
         
-        <p>Please log in to the research portal to access the full proposal and complete your review at your earliest convenience.</p>
+        <p>Please log in to the research portal to access the full manuscript and complete your review at your earliest convenience.</p>
 
         <p class="deadline-notice">Please complete your review by <strong>${new Date(
           dueDate
@@ -33,7 +33,7 @@ export const reviewAssignmentTemplate = (
           day: 'numeric',
         })}</strong>.</p>
         
-        <a href="${reviewUrl}" class="button">Review Proposal Now</a>
+        <a href="${reviewUrl}" class="button">Review Manuscript Now</a>
         
         <p>Your expert evaluation is vital to maintaining the quality of research at our institution.</p>
         

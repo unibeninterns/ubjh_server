@@ -12,7 +12,6 @@ import { PipelineStage } from 'mongoose';
 
 interface IManuscriptQuery {
   status?: string;
-  isArchived?: boolean;
 }
 
 interface IPaginationOptions {
@@ -64,19 +63,12 @@ class AdminController {
         faculty,
         sort = 'createdAt',
         order = 'desc',
-        isArchived,
       } = req.query;
 
       const query: IManuscriptQuery = {};
 
       // Apply filters if provided
       if (status) query.status = status as string;
-      // Apply isArchived filter
-      if (isArchived !== undefined) {
-        query.isArchived = isArchived === 'true';
-      } else {
-        query.isArchived = false;
-      }
 
       // Handle duplicates sorting - when sort is 'duplicates'
       if (sort === 'duplicates') {
@@ -146,11 +138,11 @@ class AdminController {
               title: 1,
               status: 1,
               createdAt: 1,
-              isArchived: 1,
               submitter: {
                 _id: '$submitterData._id',
                 name: '$submitterData.name',
                 email: '$submitterData.email',
+                assignedFaculty: '$submitterData.assignedFaculty',
               },
             },
           },
@@ -205,7 +197,7 @@ class AdminController {
           .sort(sortObj)
           .skip((options.page - 1) * options.limit)
           .limit(options.limit)
-          .populate('submitter', 'name email');
+          .populate('submitter', 'name email assignedFaculty');
 
         const totalManuscripts = await Manuscript.countDocuments({
           ...query,
@@ -228,7 +220,7 @@ class AdminController {
           .sort(sortObj)
           .skip((options.page - 1) * options.limit)
           .limit(options.limit)
-          .populate('submitter', 'name email');
+          .populate('submitter', 'name email assignedFaculty');
 
         const totalManuscripts = await Manuscript.countDocuments(query);
 
@@ -259,7 +251,7 @@ class AdminController {
 
       const manuscript = await Manuscript.findById(id).populate(
         'submitter coAuthors',
-        'name email faculty institution'
+        'name email assignedFaculty faculty institution'
       );
 
       if (!manuscript) {

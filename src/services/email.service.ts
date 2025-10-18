@@ -70,6 +70,39 @@ class EmailService {
     }
   }
 
+  async sendSubmissionConfirmationEmail(
+    to: string,
+    name: string,
+    manuscriptTitle: string,
+    isRevision = false
+  ): Promise<void> {
+    const subject = isRevision
+      ? 'Confirmation of Manuscript Revision'
+      : 'Confirmation of Manuscript Submission';
+    const loginUrl = `${this.frontendUrl}/login`;
+
+    try {
+      await this.transporter.sendMail({
+        from: this.emailFrom,
+        to,
+        subject,
+        html: submissionConfirmationTemplate(
+          name,
+          manuscriptTitle,
+          loginUrl,
+          isRevision
+        ),
+      });
+      logger.info(`Submission confirmation email sent to: ${to}`);
+    } catch (error) {
+      logger.error(
+        'Failed to send submission confirmation email:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      throw error; // Re-throw the error to be caught by the controller
+    }
+  }
+
   async sendManuscriptStatusUpdateEmail(
     to: string,
     name: string,
@@ -86,6 +119,7 @@ class EmailService {
           name,
           projectTitle,
           status,
+          undefined,
           feedbackComments
         ),
       });

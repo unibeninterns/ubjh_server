@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import Review, { ReviewStatus, ReviewType } from '../models/review.model';
 import Manuscript, {
   ManuscriptStatus,
@@ -11,7 +12,8 @@ import { getEligibleFaculties } from '../../utils/facultyClusters';
 import asyncHandler from '../../utils/asyncHandler';
 
 class ReconciliationController {
-  handleDiscrepancy = asyncHandler(async (req: Request, res: Response) => {
+  handleDiscrepancy = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
     const { manuscriptId } = req.params;
 
     const reviews = await Review.find({
@@ -58,7 +60,7 @@ class ReconciliationController {
 
     const reconciliationReview = new Review({
       manuscript: manuscriptId,
-      reviewer: reconciliationReviewer._id,
+      reviewer: reconciliationReviewer._id as mongoose.Types.ObjectId,
       reviewType: ReviewType.RECONCILIATION,
       status: ReviewStatus.IN_PROGRESS,
       dueDate,

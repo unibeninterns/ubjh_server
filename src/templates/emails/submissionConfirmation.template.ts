@@ -6,6 +6,7 @@ import {
 export const submissionConfirmationTemplate = (
   name: string,
   title: string,
+  loginUrl: string,
   isRevision = false
 ): string => {
   const subject = isRevision
@@ -14,6 +15,10 @@ export const submissionConfirmationTemplate = (
   const body = isRevision
     ? `<p>Thank you for submitting your revised manuscript titled <strong class="highlight">"${title}"</strong>.</p><p>Your revision has been received and is now under review.</p>`
     : `<p>Thank you for submitting your manuscript titled <strong class="highlight">"${title}"</strong>.</p><p>Your submission has been received and is now under review by our committee.</p>`;
+
+  const loginInfo = isRevision
+    ? `<p>You can check the status of your submission by logging into your account: <a href="${loginUrl}">Login</a></p>`
+    : `<p>You will receive your login credentials via email within 24 hours, which you can use to track the progress of your submission.</p>`;
 
   return `
 <html>
@@ -31,6 +36,8 @@ export const submissionConfirmationTemplate = (
         <p>Dear ${name},</p>
         
         ${body}
+
+        ${loginInfo}
         
         <p>We appreciate your contribution to the research community at the University of Benin. You will receive further communication regarding the status of your submission as soon as possible</p>
     </div>

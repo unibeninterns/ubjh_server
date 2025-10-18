@@ -41,7 +41,8 @@ class ReassignReviewController {
         if (!newReviewer) {
             throw new NotFoundError('New reviewer not found.');
         }
-        if (review.reviewer.equals(newReviewer._id)) {
+        const newReviewerObjectId = newReviewer._id as mongoose.Types.ObjectId;
+        if (review.reviewer.equals(newReviewerObjectId)) {
             throw new BadRequestError('The new reviewer cannot be the same as the old reviewer.');
         }
     } else { // Automatic
@@ -70,7 +71,7 @@ class ReassignReviewController {
         throw new NotFoundError('Could not select a new reviewer.');
     }
 
-    review.reviewer = newReviewer._id;
+    review.reviewer = newReviewer._id as mongoose.Types.ObjectId;
     review.status = ReviewStatus.IN_PROGRESS;
     review.dueDate = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000); // 3 weeks
 

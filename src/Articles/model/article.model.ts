@@ -175,7 +175,7 @@ const ArticleSchema: Schema<IArticle> = new Schema(
 
 // Indexes for performance optimization
 ArticleSchema.index({ title: 'text', abstract: 'text', keywords: 'text' }); // Full-text search
-ArticleSchema.index({ doi: 1 }, { unique: true }); // DOI lookup
+
 ArticleSchema.index({ publishDate: -1 }); // Sort by publication date
 ArticleSchema.index({ author: 1 });
 ArticleSchema.index({ coAuthors: 1 });

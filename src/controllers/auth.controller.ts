@@ -268,7 +268,7 @@ class AuthController {
       const response: IAuthResponse = {
         success: true,
         user: {
-          id: user.userId,
+          id: (user as any)._id.toString(),
           role: user.role,
         },
       };
