@@ -2,7 +2,7 @@ import { Router } from 'express';
 import submitRoutes from '../Manuscript_Submission/routes/submitManuscript.routes';
 import adminRoutes from './admin.routes';
 import authRoutes from './auth.routes';
-import researcherRoutes from '../researchers/routes/index';
+import authorRoutes from '../authors/routes/index';
 import reviewerRoutes from '../Reviewers/routes/reviewer.routes';
 import reviewSystemRoutes from '../Review_System/routes/review.routes';
 
@@ -12,7 +12,7 @@ const router = Router();
 router.use('/submit', submitRoutes);
 router.use('/admin', adminRoutes);
 router.use('/auth', authRoutes);
-router.use('/', researcherRoutes);
+router.use('/', authorRoutes);
 router.use('/reviewer', reviewerRoutes);
 //router.use('/reviewsys', reviewSystemRoutes);
 
