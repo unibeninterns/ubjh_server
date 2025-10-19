@@ -3,7 +3,11 @@ import crypto from 'crypto';
 import User, { UserRole } from '../../model/user.model';
 import Manuscript from '../../Manuscript_Submission/models/manuscript.model';
 import Article from '../../Articles/model/article.model';
-import { NotFoundError, UnauthorizedError, BadRequestError } from '../../utils/customErrors';
+import {
+  NotFoundError,
+  UnauthorizedError,
+  BadRequestError,
+} from '../../utils/customErrors';
 import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
@@ -36,7 +40,9 @@ class AuthorController {
       const userId = user._id;
 
       // Find the author
-      const author = await User.findById(userId).select('-password -refreshToken');
+      const author = await User.findById(userId).select(
+        '-password -refreshToken'
+      );
 
       if (!author) {
         throw new NotFoundError('Author not found');
@@ -203,6 +209,8 @@ class AuthorController {
       author.orcid = orcid;
       author.password = generatedPassword;
       author.isActive = true;
+      author.credentialsSent = true;
+      author.credentialsSentAt = new Date();
       author.inviteToken = undefined;
       author.inviteTokenExpires = undefined;
       author.invitationStatus = 'accepted';
@@ -211,7 +219,11 @@ class AuthorController {
       logger.info(`Author profile completed for: ${author.email}`);
 
       // Send login credentials to the author
-      await emailService.sendAuthorCredentialsEmail(author.email, author.name, generatedPassword);
+      await emailService.sendAuthorCredentialsEmail(
+        author.email,
+        author.name,
+        generatedPassword
+      );
       logger.info(`Login credentials sent to author: ${author.email}`);
 
       res.status(200).json({
@@ -258,6 +270,8 @@ class AuthorController {
         orcid,
         password: generatedPassword,
         role: UserRole.AUTHOR,
+        credentialsSent: true,
+        credentialsSentAt: new Date(),
         isActive: true,
         invitationStatus: 'added',
       });
@@ -265,7 +279,11 @@ class AuthorController {
       logger.info(`Author profile manually created for: ${email}`);
 
       // Send login credentials to the author
-      await emailService.sendAuthorCredentialsEmail(email, name, generatedPassword);
+      await emailService.sendAuthorCredentialsEmail(
+        email,
+        name,
+        generatedPassword
+      );
       logger.info(`Login credentials sent to author: ${email}`);
 
       res.status(201).json({
@@ -308,7 +326,9 @@ class AuthorController {
       }
 
       // Check if author has published articles
-      const publishedArticles = await Article.find({ $or: [{ author: id }, { coAuthors: id }] });
+      const publishedArticles = await Article.find({
+        $or: [{ author: id }, { coAuthors: id }],
+      });
       if (publishedArticles.length > 0) {
         throw new BadRequestError(
           'Cannot delete author with published articles.'

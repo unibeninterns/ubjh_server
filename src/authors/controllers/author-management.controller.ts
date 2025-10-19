@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import User, { UserRole } from '../../model/user.model';
-import Manuscript from '../../Manuscript_Submission/models/manuscript.model';
+import Manuscript, { IManuscript } from '../../Manuscript_Submission/models/manuscript.model';
 import { BadRequestError, NotFoundError } from '../../utils/customErrors';
 import emailService from '../../services/email.service';
 import generateSecurePassword from '../../utils/passwordGenerator';
@@ -21,18 +21,25 @@ class AuthorManagementController {
       const user = (req as AdminAuthenticatedRequest).user;
       // Find all users with the author role
       const authors = await User.find({ role: UserRole.AUTHOR }).select(
-        '_id name email credentialsSent credentialsSentAt lastLogin'
+        '_id name email credentialsSent credentialsSentAt lastLogin orcid affiliation assignedFaculty faculty'
       );
 
       // For each author, count their manuscripts
       const authorData = await Promise.all(
         authors.map(async (author) => {
-          const manuscriptCount = await Manuscript.countDocuments({
+          const mainAuthorCount = await Manuscript.countDocuments({
             submitter: author._id,
+          });
+          const coAuthorCount = await Manuscript.countDocuments({
+            coAuthors: author._id,
           });
           return {
             ...author.toObject(),
-            manuscriptCount,
+            manuscriptCount: mainAuthorCount + coAuthorCount,
+            manuscriptCountBreakdown: {
+              main: mainAuthorCount,
+              coAuthored: coAuthorCount,
+            },
           };
         })
       );
@@ -101,8 +108,20 @@ class AuthorManagementController {
       }
 
       // Find all manuscripts by this author
-      const manuscripts = await Manuscript.find({ submitter: authorId }).sort({
+      const manuscripts = await Manuscript.find({
+        $or: [{ submitter: authorId }, { coAuthors: authorId }],
+      }).sort({
         updatedAt: -1,
+      });
+
+      const manuscriptsWithRole = manuscripts.map((manuscript) => {
+        const manuscriptObject = manuscript.toObject() as IManuscript & { authorRole?: string };
+        if (manuscriptObject.submitter.toString() === authorId) {
+          manuscriptObject.authorRole = 'main';
+        } else {
+          manuscriptObject.authorRole = 'co-author';
+        }
+        return manuscriptObject;
       });
 
       logger.info(
@@ -116,7 +135,7 @@ class AuthorManagementController {
             ...author.toObject(),
             assignedFaculty: author.assignedFaculty,
           },
-          manuscripts,
+          manuscripts: manuscriptsWithRole,
         },
       });
     }

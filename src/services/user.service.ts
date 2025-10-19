@@ -25,7 +25,7 @@ class UserService {
         affiliation,
         orcid,
         role: UserRole.AUTHOR,
-        invitationStatus: 'added',
+        invitationStatus: 'none',
         manuscripts: [manuscriptId],
       });
       await user.save();

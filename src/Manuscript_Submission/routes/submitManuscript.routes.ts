@@ -70,31 +70,43 @@ const submissionRateLimiter = rateLimiter(10, 60 * 60 * 1000); // 10 requests pe
 
 const submitManuscriptSchema = z.object({
   body: z.object({
-    title: z.string().min(1, 'Title is required'),
-    abstract: z.string().min(1, 'Abstract is required'),
+    title: z.string().min(10, 'Title must be at least 10 characters'),
+    abstract: z.string().min(100, 'Abstract must be at least 100 characters'),
     keywords: z.array(z.string()).min(1, 'Keywords are required'),
     submitter: z.object({
       name: z.string().min(1, 'Submitter name is required'),
       email: z.string().email('Invalid submitter email'),
       faculty: z.string().min(1, 'Submitter faculty is required'),
       affiliation: z.string().min(1, 'Submitter affiliation is required'),
-      orcid: z.string().optional(),
+      orcid: z
+        .string()
+        .regex(/^\d{4}-\d{4}-\d{4}-\d{3}[0-9X]$/, 'Invalid ORCID format'),
     }),
-    coAuthors: z.array(z.object({
-      name: z.string().min(1, 'Co-author name is required'),
-      email: z.string().email('Invalid co-author email'),
-      faculty: z.string().min(1, 'Co-author faculty is required'),
-      affiliation: z.string().min(1, 'Co-author affiliation is required'),
-      orcid: z.string().optional(),
-    })).optional(),
+    coAuthors: z
+      .array(
+        z.object({
+          name: z.string().min(1, 'Co-author name is required'),
+          email: z.string().email('Invalid co-author email'),
+          faculty: z.string().min(1, 'Co-author faculty is required'),
+          affiliation: z.string().min(1, 'Co-author affiliation is required'),
+          orcid: z
+            .string()
+            .regex(/^\d{4}-\d{4}-\d{4}-\d{3}[0-9X]$/, 'Invalid ORCID format')
+            .optional(),
+        })
+      )
+      .optional(),
   }),
 });
+
+import { parseManuscriptRequest } from '../../middleware/parseManuscriptRequest';
 
 // Route for submitting a new manuscript
 router.post(
   '/manuscript',
   submissionRateLimiter,
   manuscriptUpload,
+  parseManuscriptRequest,
   validateRequest(submitManuscriptSchema),
   submitController.submitManuscript
 );

@@ -24,10 +24,8 @@ export const authorCredentialsTemplate = (
         
         <div class="credentials">
             <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Temporary Password:</strong> ${password}</p>
+            <p><strong>Password:</strong> ${password}</p>
         </div>
-        
-        <p>For your security, we strongly recommend that you change this temporary password upon your first login. You can do this from your account settings.</p>
         
         <p>Please click the button below to log in to the UBJH portal:</p>
         

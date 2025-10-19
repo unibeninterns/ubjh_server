@@ -83,9 +83,12 @@ const reviseManuscriptSchema = z.object({
   }),
 });
 
+import { parseManuscriptRequest } from '../../middleware/parseManuscriptRequest';
+
 router.post(
   '/:id/revise',
   upload.single('pdf'),
+  parseManuscriptRequest,
   validateRequest(reviseManuscriptSchema),
   reviseController.reviseManuscript
 );

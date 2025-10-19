@@ -42,29 +42,7 @@ class SubmitController {
       req: Request<{}, {}, any>,
       res: Response<IManuscriptResponse>
     ): Promise<void> => {
-      // Parse JSON fields from FormData
-      let parsedBody: IManuscriptRequest;
-
-      try {
-        parsedBody = {
-          title: JSON.parse(req.body.title),
-          abstract: JSON.parse(req.body.abstract),
-          keywords: JSON.parse(req.body.keywords),
-          submitter: JSON.parse(req.body.submitter),
-          coAuthors: req.body.coAuthors
-            ? JSON.parse(req.body.coAuthors)
-            : undefined,
-        };
-      } catch (parseError) {
-        res.status(400).json({
-          success: false,
-          message:
-            'Invalid request data format. Please ensure all fields are properly formatted.',
-        });
-        return;
-      }
-
-      const { title, abstract, keywords, submitter, coAuthors } = parsedBody;
+      const { title, abstract, keywords, submitter, coAuthors } = req.body;
 
       // Validate required fields
       if (!title || !abstract || !keywords || !submitter) {

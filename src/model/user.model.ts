@@ -25,7 +25,7 @@ export interface IUser extends Document {
   refreshToken?: string;
   inviteToken?: string;
   inviteTokenExpires?: Date;
-  invitationStatus: 'pending' | 'accepted' | 'added' | 'expired';
+  invitationStatus: 'pending' | 'accepted' | 'added' | 'expired' | 'none';
   credentialsSent: boolean;
   credentialsSentAt?: Date;
   lastLogin?: Date;
@@ -116,8 +116,15 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     invitationStatus: {
       type: String,
-      enum: ['pending', 'accepted', 'added', 'expired'],
+      enum: ['pending', 'accepted', 'added', 'expired', 'none'],
       default: 'pending',
+    },
+    credentialsSent: {
+      type: Boolean,
+      default: false,
+    },
+    credentialsSentAt: {
+      type: Date,
     },
     lastLogin: {
       type: Date,

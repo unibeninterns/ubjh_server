@@ -124,6 +124,8 @@ class ReviewerController {
       reviewer.affiliation = affiliation;
       reviewer.password = generatedPassword;
       reviewer.isActive = true;
+      reviewer.credentialsSent = true;
+      reviewer.credentialsSentAt = new Date();
       reviewer.inviteToken = undefined;
       reviewer.inviteTokenExpires = undefined;
       reviewer.invitationStatus = 'accepted';
@@ -184,6 +186,8 @@ class ReviewerController {
         affiliation,
         password: generatedPassword,
         role: UserRole.REVIEWER,
+        credentialsSent: true,
+        credentialsSentAt: new Date(),
         isActive: true,
         invitationStatus: 'added',
       });
@@ -191,7 +195,11 @@ class ReviewerController {
       logger.info(`Reviewer profile manually created for: ${email}`);
 
       // Send login credentials to the reviewer
-      await emailService.sendReviewerCredentialsEmail(email, name, generatedPassword);
+      await emailService.sendReviewerCredentialsEmail(
+        email,
+        name,
+        generatedPassword
+      );
       logger.info(`Login credentials sent to reviewer: ${email}`);
 
       res.status(201).json({
