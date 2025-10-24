@@ -33,6 +33,15 @@ class ReassignReviewController {
     const oldReviewerId = review.reviewer;
     let newReviewer: IUser | null = null;
 
+    // Remove manuscript from old reviewer's assignedReviews
+    const oldReviewer = await User.findById(oldReviewerId);
+    if (oldReviewer && oldReviewer.assignedReviews) {
+      oldReviewer.assignedReviews = oldReviewer.assignedReviews.filter(
+        (id) => !id.equals(manuscript._id)
+      );
+      await oldReviewer.save();
+    }
+
     if (assignmentType === 'manual') {
         if (!newReviewerId) {
             throw new BadRequestError('New reviewer ID is required for manual reassignment.');
@@ -77,6 +86,15 @@ class ReassignReviewController {
 
     await review.save();
 
+    // Add manuscript to new reviewer's assignedReviews
+    if (newReviewer) {
+      if (!newReviewer.assignedReviews) {
+        newReviewer.assignedReviews = [];
+      }
+      newReviewer.assignedReviews.push(manuscript._id as mongoose.Types.ObjectId);
+      await newReviewer.save();
+    }
+
     try {
       await emailService.sendReviewAssignmentEmail(
         newReviewer.email,
@@ -86,67 +104,57 @@ class ReassignReviewController {
       );
     } catch (error) {
       logger.error('Failed to send review assignment email:', error);
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Review reassigned successfully',
-      data: { review, oldReviewerId },
-    });
-  });
-
-  getEligibleReviewers = asyncHandler(async (req: Request, res: Response) => {
-    const { manuscriptId } = req.params;
-
-    const manuscript = await Manuscript.findById(manuscriptId).populate('submitter');
-    if (!manuscript) {
-      throw new NotFoundError('Manuscript not found');
-    }
-
-    const submitter = manuscript.submitter as any;
-    const eligibleFaculties = getEligibleFaculties(submitter.assignedFaculty);
-
-    const existingReviewerIds = (await Review.find({ manuscript: manuscriptId })).map(r => r.reviewer);
-
-    const eligibleReviewers = await User.find({
-      role: UserRole.REVIEWER,
-      isActive: true,
-      assignedFaculty: { $in: eligibleFaculties },
-      _id: { $nin: existingReviewerIds },
-    });
-
-    const adminReviewers = await User.find({ role: UserRole.ADMIN, isActive: true, _id: { $nin: existingReviewerIds } });
-
-    res.status(200).json({
-      success: true,
-      data: [...eligibleReviewers, ...adminReviewers],
-    });
-  });
-
-  getExistingReviewers = asyncHandler(async (req: Request, res: Response) => {
-    const { manuscriptId } = req.params;
-
-    const manuscript = await Manuscript.findById(manuscriptId);
-    if (!manuscript) {
-        throw new NotFoundError('Manuscript not found');
-    }
-
-    const reviews = await Review.find({ manuscript: manuscriptId }).populate('reviewer', 'name email role');
-
-    res.status(200).json({
-        success: true,
-        data: {
-            manuscriptStatus: manuscript.status,
-            reviews: reviews.map(r => ({
-                reviewId: r._id,
-                reviewType: r.reviewType,
-                status: r.status,
-                dueDate: r.dueDate,
-                reviewer: r.reviewer
+              }
+              res.status(200).json({
+                success: true,
+                message: 'Review reassigned successfully',
+                data: { review, oldReviewerId },
+              });
+            });
+            getEligibleReviewers = asyncHandler(async (req: Request, res: Response) => {
+              const { manuscriptId } = req.params;
+              const manuscript = await Manuscript.findById(manuscriptId).populate('submitter');
+              if (!manuscript) {
+                throw new NotFoundError('Manuscript not found');
+              }
+              const submitter = manuscript.submitter as any;
+              const eligibleFaculties = getEligibleFaculties(submitter.assignedFaculty);
+              const existingReviewerIds = (await Review.find({ manuscript: manuscriptId
+    })).map(r => r.reviewer);
+              const eligibleReviewers = await User.find({
+                role: UserRole.REVIEWER,
+                isActive: true,
+                assignedFaculty: { $in: eligibleFaculties },
+                _id: { $nin: existingReviewerIds },
+              });
+              const adminReviewers = await User.find({ role: UserRole.ADMIN, isActive: true, _id: { $nin: existingReviewerIds } });
+              res.status(200).json({
+              success: true,
+              data: [...eligibleReviewers, ...adminReviewers],
+            });
+          });
+              getExistingReviewers = asyncHandler(async (req: Request, res: Response) => {
+                const { manuscriptId } = req.params;
+                
+                const manuscript = await Manuscript.findById(manuscriptId);
+                if (!manuscript) {
+                    throw new NotFoundError('Manuscript not found');
+          }
+          const reviews = await Review.find({ manuscript: manuscriptId }).populate(
+  'reviewer', 'name email role');
+                res.status(200).json({
+                    success: true,
+                    data: {
+                            manuscriptStatus: manuscript.status,
+                            reviews: reviews.map(r => ({
+                            reviewId: r._id,
+                            reviewType: r.reviewType,
+                            status: r.status,
+                            dueDate: r.dueDate,
+                            reviewer: r.reviewer
             }))
         }
+      });
     });
-  });
 }
-
-export default new ReassignReviewController();
+ export default new ReassignReviewController();  

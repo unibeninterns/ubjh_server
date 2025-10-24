@@ -261,7 +261,7 @@ class ReviewerController {
         .skip((options.page - 1) * options.limit)
         .limit(options.limit)
         .populate({
-          path: 'assignedJournals',
+          path: 'assignedReviews',
           select: 'title submitter', // Select relevant fields from Manuscript
           populate: {
             path: 'submitter',
@@ -275,7 +275,7 @@ class ReviewerController {
       const reviewersWithDetails = await Promise.all(
         reviewers.map(async (reviewer) => {
           // Get assigned reviews (all reviews assigned to this reviewer)
-          // This count is based on the Review model, not directly from User.assignedJournals
+          // This count is based on the Review model, not directly from User.assignedReviews
           const assignedReviewsCount = await Review.countDocuments({
             reviewer: reviewer._id,
           });
@@ -299,8 +299,8 @@ class ReviewerController {
               completed: completedReviewsCount,
               completionRate,
             },
-            // Include the populated assignedJournals directly
-            assignedJournals: reviewer.assignedJournals,
+            // Include the populated assignedReviews directly
+            assignedReviews: reviewer.assignedReviews,
           };
         })
       );
@@ -362,7 +362,7 @@ class ReviewerController {
       );
 
       // Combine in-progress and overdue reviews to represent "assigned journals reviews" (incomplete ones)
-      const assignedJournalsReviews = [...inProgressReviews, ...overdueReviews];
+      const assignedReviews = [...inProgressReviews, ...overdueReviews];
 
       logger.info(`Admin ${user._id} retrieved reviewer ${id}`);
 
@@ -370,8 +370,8 @@ class ReviewerController {
         success: true,
         data: {
           ...reviewer.toObject(), // Convert Mongoose document to plain object
-          // Set assignedJournals to be the list of incomplete reviews as per user's clarification
-          assignedJournals: assignedJournalsReviews,
+          // Set assignedReviews to be the list of incomplete reviews as per user's clarification
+          assignedReviews: assignedReviews,
           allAssignedReviews, // Still provide all assigned review documents
           completedReviews,
           inProgressReviews,
@@ -405,7 +405,7 @@ class ReviewerController {
       }
 
       // Check if reviewer has assigned journals
-      if ((reviewer.assignedJournals ?? []).length > 0) {
+      if ((reviewer.assignedReviews ?? []).length > 0) {
         throw new BadRequestError(
           'Cannot delete reviewer with assigned journals. Please reassign them first.'
         );
@@ -445,13 +445,17 @@ class ReviewerController {
       const invitations = await User.find({
         role: UserRole.REVIEWER,
         invitationStatus: { $in: ['pending', 'expired', 'accepted', 'added'] },
-      }).select('_id email inviteTokenExpires createdAt invitationStatus');
+      }).select(
+        '_id email assignedFaculty assignedReviews inviteTokenExpires createdAt invitationStatus'
+      );
 
       const formattedInvitations = invitations.map((invitation) => ({
         id: invitation._id,
         email: invitation.email,
         status: invitation.invitationStatus,
         created: invitation.createdAt.toISOString().split('T')[0],
+        assignedFaculty: invitation.assignedFaculty ?? null,
+        assignedReviews: invitation.assignedReviews ?? null,
         expires: invitation.inviteTokenExpires
           ? invitation.inviteTokenExpires.toISOString().split('T')[0]
           : null,
@@ -537,8 +541,8 @@ class ReviewerController {
       }
 
       // Get assigned journals with details
-      const assignedJournals = await Manuscript.find({
-        _id: { $in: reviewer.assignedJournals },
+      const assignedReviews = await Manuscript.find({
+        _id: { $in: reviewer.assignedReviews },
       })
         .populate('submitter', 'name email')
         .select('-pdfFile');
@@ -581,7 +585,7 @@ class ReviewerController {
             overdue: overdueReviews.length,
             totalAssigned: totalAssigned.length,
           },
-          assignedJournals,
+          assignedReviews,
           completedReviews,
           inProgressReviews,
           overdueReviews,

@@ -52,11 +52,13 @@ class AdminReviewController {
         reviewer: adminId,
       }).populate({
         path: 'manuscript',
-        select: 'title abstract keywords',
+        select: 'title abstract keywords pdfFile',
       });
 
       if (!review) {
-        throw new NotFoundError('Review not found or not assigned to this admin');
+        throw new NotFoundError(
+          'Review not found or not assigned to this admin'
+        );
       }
 
       res.status(200).json({

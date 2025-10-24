@@ -81,7 +81,7 @@ class EmailService {
     const subject = isRevision
       ? 'Confirmation of Manuscript Revision'
       : 'Confirmation of Manuscript Submission';
-    const loginUrl = `${this.frontendUrl}/login`;
+    const loginUrl = `${this.frontendUrl}/author/login`;
 
     try {
       await this.transporter.sendMail({
@@ -143,7 +143,7 @@ class EmailService {
     authorName: string,
     dueDate: Date
   ): Promise<void> {
-    const reviewUrl = `${this.frontendUrl}/reviewers/assignments`;
+    const reviewUrl = `${this.frontendUrl}/reviewer/assignments`;
 
     try {
       await this.transporter.sendMail({
@@ -172,14 +172,19 @@ class EmailService {
     manuscriptTitle: string,
     reminderType: '3_WEEKS' | '4_WEEKS' | '5_WEEKS'
   ): Promise<void> {
-    const reviewUrl = `${this.frontendUrl}/reviewers/dashboard`;
+    const reviewUrl = `${this.frontendUrl}/reviewer/dashboard`;
 
     try {
       await this.transporter.sendMail({
         from: this.emailFrom,
         to: email,
         subject: 'OVERDUE: Manuscript Review',
-        html: overdueReviewTemplate(reviewerName, manuscriptTitle, reviewUrl, reminderType),
+        html: overdueReviewTemplate(
+          reviewerName,
+          manuscriptTitle,
+          reviewUrl,
+          reminderType
+        ),
       });
       logger.info(`Overdue review notification sent to: ${email}`);
     } catch (error) {
@@ -194,7 +199,7 @@ class EmailService {
     email: string,
     token: string
   ): Promise<void> {
-    const inviteUrl = `${this.frontendUrl}/reviewers/complete-profile?token=${token}`;
+    const inviteUrl = `${this.frontendUrl}/accept-reviewer-invite/${token}`;
 
     try {
       await this.transporter.sendMail({
@@ -217,7 +222,7 @@ class EmailService {
     name: string,
     password: string
   ): Promise<void> {
-    const loginUrl = `${this.frontendUrl}/login`;
+    const loginUrl = `${this.frontendUrl}/reviewer/login`;
 
     try {
       await this.transporter.sendMail({
@@ -235,11 +240,8 @@ class EmailService {
     }
   }
 
-  async sendAuthorInvitationEmail(
-    email: string,
-    token: string
-  ): Promise<void> {
-    const inviteUrl = `${this.frontendUrl}/authors/complete-profile?token=${token}`;
+  async sendAuthorInvitationEmail(email: string, token: string): Promise<void> {
+    const inviteUrl = `${this.frontendUrl}/accept-author-invite/${token}`;
 
     try {
       await this.transporter.sendMail({
@@ -262,7 +264,7 @@ class EmailService {
     name: string,
     password: string
   ): Promise<void> {
-    const loginUrl = `${this.frontendUrl}/login`;
+    const loginUrl = `${this.frontendUrl}/author/login`;
 
     try {
       await this.transporter.sendMail({
@@ -286,7 +288,7 @@ class EmailService {
     manuscriptTitle: string,
     dueDate: Date
   ): Promise<void> {
-    const reviewUrl = `${this.frontendUrl}/reviewers/dashboard`;
+    const reviewUrl = `${this.frontendUrl}/reviewer/dashboard`;
 
     try {
       await this.transporter.sendMail({

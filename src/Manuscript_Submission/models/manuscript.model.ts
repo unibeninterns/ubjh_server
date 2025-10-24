@@ -24,6 +24,7 @@ export enum ReviewDecision {
 export interface IManuscript extends Document {
   // Basic Metadata
   title: string;
+  assignedReviewerCount?: number;
   abstract: string;
   keywords: string[];
 
@@ -162,6 +163,8 @@ const ManuscriptSchema: Schema<IManuscript> = new Schema(
   },
   {
     timestamps: false, // Using custom createdAt/updatedAt
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
@@ -192,6 +195,13 @@ ManuscriptSchema.methods.canBeEdited = function (this: IManuscript): boolean {
 };
 
 // Static method to get manuscripts by status
+ManuscriptSchema.virtual('assignedReviewerCount', {
+  ref: 'Review',
+  localField: '_id',
+  foreignField: 'manuscript',
+  count: true,
+});
+
 ManuscriptSchema.statics.getByStatus = function (status: ManuscriptStatus) {
   return this.find({ status })
     .populate('submitter', 'name email')

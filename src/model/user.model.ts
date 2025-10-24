@@ -19,7 +19,7 @@ export interface IUser extends Document {
   affiliation: string;
   orcid?: string;
   manuscripts?: Types.ObjectId[];
-  assignedJournals?: Types.ObjectId[]; // For reviewers
+  assignedReviews?: Types.ObjectId[]; // For reviewers
   completedReviews?: Types.ObjectId[]; // For reviewers
   isActive: boolean;
   refreshToken?: string;
@@ -92,7 +92,7 @@ const UserSchema: Schema<IUser> = new Schema(
         ref: 'Manuscript',
       },
     ],
-    assignedJournals: [
+    assignedReviews: [
       {
         type: Schema.Types.ObjectId,
         ref: 'Manuscript',

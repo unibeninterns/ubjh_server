@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { Request, Response } from 'express';
 import Manuscript from '../Manuscript_Submission/models/manuscript.model';
 import { NotFoundError, UnauthorizedError } from '../utils/customErrors';
@@ -144,6 +145,7 @@ class AdminController {
                 email: '$submitterData.email',
                 assignedFaculty: '$submitterData.assignedFaculty',
               },
+              assignedReviewerCount: { $size: '$reviews' },
             },
           },
         ];
@@ -199,6 +201,19 @@ class AdminController {
             $unwind: '$submitterData',
           },
           {
+            $lookup: {
+              from: 'Reviews',
+              localField: '_id',
+              foreignField: 'manuscript',
+              as: 'reviews',
+            },
+          },
+          {
+            $addFields: {
+              assignedReviewerCount: { $size: '$reviews' },
+            },
+          },
+          {
             $match: {
               ...query,
               'submitterData.assignedFaculty': faculty, // Match by assignedFaculty
@@ -226,6 +241,7 @@ class AdminController {
                 email: '$submitterData.email',
                 assignedFaculty: '$submitterData.assignedFaculty',
               },
+              assignedReviewerCount: '$assignedReviewerCount',
             },
           },
         ];
@@ -271,13 +287,13 @@ class AdminController {
           currentPage: options.page,
           data: manuscripts,
         });
-        return;
       } else {
         manuscripts = await Manuscript.find(query)
           .sort(sortObj)
           .skip((options.page - 1) * options.limit)
           .limit(options.limit)
-          .populate('submitter', 'name email assignedFaculty');
+          .populate('submitter', 'name email assignedFaculty')
+          .populate('assignedReviewerCount');
 
         const totalManuscripts = await Manuscript.countDocuments(query);
 

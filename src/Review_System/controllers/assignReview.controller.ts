@@ -182,6 +182,13 @@ class AssignReviewController {
 
       await review.save();
 
+      // Update the reviewer's assignedReviews array
+      if (!selectedReviewer.assignedReviews) {
+        selectedReviewer.assignedReviews = [];
+      }
+      selectedReviewer.assignedReviews.push(new Types.ObjectId(manuscriptId));
+      await selectedReviewer.save();
+
       try {
         await emailService.sendReviewAssignmentEmail(
           selectedReviewer.email,

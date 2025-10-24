@@ -143,12 +143,7 @@ class ManuscriptReviewsController {
       if (status) {
         if (status === 'reviewed') {
           matchConditions.status = {
-            $in: [
-              'approved',
-              'rejected',
-              'minor_revision',
-              'major_revision',
-            ],
+            $in: ['approved', 'rejected', 'minor_revision', 'major_revision'],
           };
         } else {
           matchConditions.status = status;
@@ -314,12 +309,9 @@ class ManuscriptReviewsController {
         totalWithReviews++;
         if (manuscript.status === 'under_review') underReview++;
         if (
-          [
-            'approved',
-            'rejected',
-            'minor_revision',
-            'major_revision',
-          ].includes(manuscript.status)
+          ['approved', 'rejected', 'minor_revision', 'major_revision'].includes(
+            manuscript.status
+          )
         )
           reviewed++;
         if (manuscript.status === 'in_reconciliation') inReconciliation++;

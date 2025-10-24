@@ -1,9 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Review, { ReviewStatus, ReviewType } from '../models/review.model';
-import Manuscript from '../../Manuscript_Submission/models/manuscript.model';
 import { NotFoundError } from '../../utils/customErrors';
 import asyncHandler from '../../utils/asyncHandler';
-import logger from '../../utils/logger';
 import reconciliationController from './reconciliation.controller';
 
 interface IReviewResponse {
@@ -52,7 +50,7 @@ class ReviewController {
         reviewer: reviewerId,
       }).populate({
         path: 'manuscript',
-        select: 'title abstract keywords',
+        select: 'title abstract keywords pdfFile',
       });
 
       if (!review) {
@@ -67,7 +65,11 @@ class ReviewController {
   );
 
   submitReview = asyncHandler(
-    async (req: Request, res: Response<IReviewResponse>, next: NextFunction): Promise<void> => {
+    async (
+      req: Request,
+      res: Response<IReviewResponse>,
+      next: NextFunction
+    ): Promise<void> => {
       const user = (req as AuthenticatedRequest).user;
       const { id } = req.params;
       const reviewerId = user.id;

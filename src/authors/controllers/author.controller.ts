@@ -369,13 +369,16 @@ class AuthorController {
       const invitations = await User.find({
         role: UserRole.AUTHOR,
         invitationStatus: { $in: ['pending', 'expired', 'accepted', 'added'] },
-      }).select('_id email inviteTokenExpires createdAt invitationStatus');
+      }).select(
+        '_id email assignedFaculty inviteTokenExpires createdAt invitationStatus'
+      );
 
       const formattedInvitations = invitations.map((invitation) => ({
         id: invitation._id,
         email: invitation.email,
         status: invitation.invitationStatus,
         created: invitation.createdAt.toISOString().split('T')[0],
+        assignedFaculty: invitation.assignedFaculty ?? null,
         expires: invitation.inviteTokenExpires
           ? invitation.inviteTokenExpires.toISOString().split('T')[0]
           : null,
