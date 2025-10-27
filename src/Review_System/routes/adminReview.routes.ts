@@ -7,7 +7,7 @@ import {
 
 const router = Router();
 
-const adminReviewRateLimiter = rateLimiter(100, 60 * 60 * 1000);
+const adminReviewRateLimiter = rateLimiter(1000, 60 * 60 * 1000);
 
 // Route to get all reviews assigned to the admin
 router.get(
@@ -47,6 +47,20 @@ router.patch(
   authenticateAdminToken,
   adminReviewRateLimiter,
   adminReviewController.saveReviewProgress
+);
+
+router.get(
+  '/:id/with-history',
+  authenticateAdminToken,
+  adminReviewRateLimiter,
+  adminReviewController.getReviewWithHistory
+);
+
+router.get(
+  '/:id/reconciliation-data',
+  authenticateAdminToken,
+  adminReviewRateLimiter,
+  adminReviewController.getReconciliationData
 );
 
 export default router;

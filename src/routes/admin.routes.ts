@@ -62,6 +62,6 @@ router.use('/assign-review', assignReviewRoutes);
 router.use('/reassign-review', reassignReviewRoutes);
 router.use('/manuscript-reviews', manuscriptReviewsRoutes);
 router.use('/decisions', finalDecisionsRoutes);
-router.use('/reviews', adminReviewRoutes);
+router.use('/', adminReviewRoutes);
 
 export default router;

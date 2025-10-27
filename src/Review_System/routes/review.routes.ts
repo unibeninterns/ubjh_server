@@ -1,12 +1,17 @@
 import { Router } from 'express';
 import reviewController from '../controllers/review.controller';
-import { authenticateReviewerToken } from '../../middleware/auth.middleware';
+import {
+  authenticateReviewerToken,
+  rateLimiter,
+} from '../../middleware/auth.middleware';
 import validateRequest from '../../middleware/validateRequest';
 import { z } from 'zod';
 import { ReviewDecision } from '../../Manuscript_Submission/models/manuscript.model';
 
 const router = Router();
 
+const reviewerRateLimiter = rateLimiter(1000, 60 * 60 * 1000);
+router.use(reviewerRateLimiter);
 
 const reviewIdSchema = z.object({
   params: z.object({
@@ -85,6 +90,20 @@ router.patch(
   authenticateReviewerToken,
   validateRequest(saveProgressSchema),
   reviewController.saveReviewProgress
+);
+
+router.get(
+  '/:id/with-history',
+  authenticateReviewerToken,
+  validateRequest(reviewIdSchema),
+  reviewController.getReviewWithHistory
+);
+
+router.get(
+  '/:id/reconciliation-data',
+  authenticateReviewerToken,
+  validateRequest(reviewIdSchema),
+  reviewController.getReconciliationData
 );
 
 export default router;

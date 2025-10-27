@@ -154,6 +154,103 @@ class ReviewController {
     }
   );
 
+  getReviewWithHistory = asyncHandler(
+    async (req: Request, res: Response<IReviewResponse>): Promise<void> => {
+      const user = (req as AuthenticatedRequest).user;
+      const { id } = req.params;
+      const reviewerId = user.id;
+
+      const review = await Review.findOne({
+        _id: id,
+        reviewer: reviewerId,
+      }).populate({
+        path: 'manuscript',
+        select: 'title abstract keywords pdfFile revisedPdfFile revisionType',
+      });
+
+      if (!review) {
+        throw new NotFoundError('Review not found or unauthorized');
+      }
+
+      const manuscript = review.manuscript as any;
+      let previousReview = null;
+
+      // If this is a revised manuscript, get the reviewer's previous review
+      if (manuscript.revisedPdfFile) {
+        previousReview = await Review.findOne({
+          manuscript: manuscript._id,
+          reviewer: reviewerId,
+          status: ReviewStatus.COMPLETED,
+          createdAt: { $lt: review.createdAt }, // Get previous review
+        }).select('scores totalScore comments reviewDecision completedAt');
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          review,
+          previousReview,
+          isRevised: !!manuscript.revisedPdfFile,
+          revisionType: manuscript.revisionType,
+        },
+      });
+    }
+  );
+
+  getReconciliationData = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const user = (req as AuthenticatedRequest).user;
+      const { id } = req.params;
+      const reviewerId = user.id;
+
+      const review = await Review.findOne({
+        _id: id,
+        reviewer: reviewerId,
+        reviewType: ReviewType.RECONCILIATION,
+      }).populate('manuscript');
+
+      if (!review) {
+        throw new NotFoundError('Reconciliation review not found');
+      }
+
+      // Get the two conflicting reviews
+      const conflictingReviews = await Review.find({
+        manuscript: review.manuscript,
+        reviewType: ReviewType.HUMAN,
+        status: ReviewStatus.COMPLETED,
+      })
+        .populate('reviewer', 'name')
+        .select('reviewDecision totalScore createdAt reviewer');
+
+      if (conflictingReviews.length < 2) {
+        throw new Error('Conflicting reviews not found');
+      }
+
+      const [review1, review2] = conflictingReviews;
+
+      res.status(200).json({
+        success: true,
+        data: {
+          review,
+          conflictingReviews: [
+            {
+              reviewerName: (review1.reviewer as any).name,
+              reviewDecision: review1.reviewDecision,
+              totalScore: review1.totalScore,
+              completedAt: review1.createdAt,
+            },
+            {
+              reviewerName: (review2.reviewer as any).name,
+              reviewDecision: review2.reviewDecision,
+              totalScore: review2.totalScore,
+              completedAt: review2.createdAt,
+            },
+          ],
+        },
+      });
+    }
+  );
+
   getReviewerStatistics = asyncHandler(
     async (req: Request, res: Response<IReviewResponse>): Promise<void> => {
       const user = (req as AuthenticatedRequest).user;

@@ -7,8 +7,10 @@ import { NotFoundError } from '../../utils/customErrors';
 import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
-import { Types } from 'mongoose';
-import userService from '../../services/user.service';
+import Review, {
+  ReviewStatus,
+  ReviewType,
+} from '../../Review_System/models/review.model';
 
 // Interface for the new manuscript submission request
 interface IManuscriptRequest {
@@ -38,14 +40,15 @@ interface IManuscriptResponse {
   count?: number;
 }
 
-class ReviseController {  // Revise a manuscript
+class ReviseController {
+  // Revise a manuscript
   reviseManuscript = asyncHandler(
     async (
       req: Request<{ id: string }, {}, IManuscriptRequest>,
       res: Response<IManuscriptResponse>
     ): Promise<void> => {
       const { id } = req.params;
-      const { title, abstract, keywords, submitter, coAuthors } = req.body;
+      const { title, abstract, keywords, submitter } = req.body;
 
       if (!req.file) {
         res.status(400).json({
@@ -73,8 +76,7 @@ class ReviseController {  // Revise a manuscript
         return;
       }
 
-      // 3. Verify that the user making the request is the original submitter
-      // Note: This assumes you have user authentication middleware that sets req.user
+      // 3. Verify authorization
       const userId = (req as any).user.id;
       if (originalManuscript.submitter.toString() !== userId) {
         res.status(403).json({
@@ -84,67 +86,94 @@ class ReviseController {  // Revise a manuscript
         return;
       }
 
-      // Create a placeholder for the revised manuscript to get an ID
-      const tempRevisedManuscript = new Manuscript();
-      const revisedManuscriptId = tempRevisedManuscript._id;
-
-      // Find or create the submitter and co-authors for the revised manuscript
-      const submitterId = await userService.findOrCreateUser(
-        submitter.email,
-        submitter.name,
-        submitter.faculty,
-        submitter.affiliation,
-        revisedManuscriptId as Types.ObjectId,
-        submitter.orcid
-      );
-
-      const coAuthorIds: Types.ObjectId[] = [];
-      if (coAuthors && coAuthors.length > 0) {
-        for (const coAuthor of coAuthors) {
-          const coAuthorId = await userService.findOrCreateUser(
-            coAuthor.email,
-            coAuthor.name,
-            coAuthor.faculty,
-            coAuthor.affiliation,
-            revisedManuscriptId as Types.ObjectId,
-            coAuthor.orcid
-          );
-          coAuthorIds.push(coAuthorId);
-        }
-      }
-
-      // Create and save the revised manuscript
       const pdfFile = `${
         process.env.API_URL || 'http://localhost:3000'
       }/uploads/documents/${req.file.filename}`;
 
-      const revisedManuscript = new Manuscript({
-        _id: revisedManuscriptId,
-        title,
-        abstract,
-        keywords,
-        submitter: submitterId,
-        coAuthors: coAuthorIds,
-        pdfFile,
-        originalFilename: req.file.originalname,
-        fileSize: req.file.size,
-        fileType: req.file.mimetype,
-        revisedFrom: originalManuscript._id, // Link to the original manuscript
-        status: ManuscriptStatus.SUBMITTED, // The revised manuscript starts as "submitted"
-      });
-      await revisedManuscript.save();
+      // Update the original manuscript with revised PDF
+      originalManuscript.revisedPdfFile = pdfFile;
+      originalManuscript.title = title;
+      originalManuscript.abstract = abstract;
+      originalManuscript.keywords = keywords;
 
-      // 6. Update the status of the original manuscript to 'REVISED'
-      originalManuscript.status = ManuscriptStatus.REVISED;
+      // Reset status to submitted for re-review
+      const isMinorRevision = originalManuscript.revisionType === 'minor';
+      originalManuscript.status = ManuscriptStatus.SUBMITTED;
+
       await originalManuscript.save();
 
-      // Send confirmation email for the revision
+      // Auto-assign based on revision type
+      if (isMinorRevision) {
+        // Assign to admin for minor revision
+        const admin = await User.findOne({
+          role: UserRole.ADMIN,
+          isActive: true,
+        });
+        if (admin) {
+          const dueDate = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
+          const review = new Review({
+            manuscript: originalManuscript._id,
+            reviewer: admin._id,
+            reviewType: ReviewType.HUMAN,
+            status: ReviewStatus.IN_PROGRESS,
+            dueDate,
+          });
+          await review.save();
+          originalManuscript.status = ManuscriptStatus.UNDER_REVIEW;
+          await originalManuscript.save();
+
+          try {
+            await emailService.sendReviewAssignmentEmail(
+              admin.email,
+              title,
+              submitter.name,
+              dueDate
+            );
+          } catch (error) {
+            logger.error(
+              'Failed to send admin review assignment email:',
+              error
+            );
+          }
+        }
+      } else if (originalManuscript.originalReviewer) {
+        // Assign to original reviewer for major revision
+        const dueDate = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
+        const review = new Review({
+          manuscript: originalManuscript._id,
+          reviewer: originalManuscript.originalReviewer,
+          reviewType: ReviewType.HUMAN,
+          status: ReviewStatus.IN_PROGRESS,
+          dueDate,
+        });
+        await review.save();
+        originalManuscript.status = ManuscriptStatus.UNDER_REVIEW;
+        await originalManuscript.save();
+
+        const reviewer = await User.findById(
+          originalManuscript.originalReviewer
+        );
+        if (reviewer) {
+          try {
+            await emailService.sendReviewAssignmentEmail(
+              reviewer.email,
+              title,
+              submitter.name,
+              dueDate
+            );
+          } catch (error) {
+            logger.error('Failed to send reviewer assignment email:', error);
+          }
+        }
+      }
+
+      // Send confirmation email
       try {
         await emailService.sendSubmissionConfirmationEmail(
           submitter.email,
           submitter.name,
           title,
-          true // isRevision
+          true
         );
       } catch (error) {
         logger.error(
@@ -155,10 +184,10 @@ class ReviseController {  // Revise a manuscript
 
       logger.info(`Manuscript ${id} has been revised by: ${submitter.email}`);
 
-      res.status(201).json({
+      res.status(200).json({
         success: true,
-        message: 'Manuscript revised successfully and is under review.',
-        data: { manuscriptId: (revisedManuscriptId as any).toString() },
+        message: 'Manuscript revised successfully and assigned for review.',
+        data: { manuscriptId: originalManuscript._id.toString() },
       });
     }
   );

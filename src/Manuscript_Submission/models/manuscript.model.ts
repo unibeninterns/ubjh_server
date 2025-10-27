@@ -33,6 +33,7 @@ export interface IManuscript extends Document {
   originalFilename: string;
   fileSize: number; // In bytes
   fileType: string; // MIME type
+  revisedPdfFile?: string; // URL path to revised PDF, if applicable
 
   // Authorship
   submitter: Types.ObjectId; // Reference to User (primary author)
@@ -40,6 +41,8 @@ export interface IManuscript extends Document {
 
   // Workflow Status
   status: ManuscriptStatus;
+  revisionType?: 'minor' | 'major';
+  originalReviewer?: Types.ObjectId; // Reviewer who recommended major revision
 
   // Revision Tracking
   revisedFrom?: Types.ObjectId;
@@ -88,6 +91,9 @@ const ManuscriptSchema: Schema<IManuscript> = new Schema(
     pdfFile: {
       type: String,
       required: [true, 'PDF file is required'],
+      revisedPdfFile: {
+        type: String, // Only present if this is a revised submission
+      },
     },
     originalFilename: {
       type: String,
@@ -121,6 +127,19 @@ const ManuscriptSchema: Schema<IManuscript> = new Schema(
       type: String,
       enum: Object.values(ManuscriptStatus),
       default: ManuscriptStatus.SUBMITTED,
+    },
+
+    revisionType: {
+      type: String,
+      enum: ['minor', 'major'],
+      // Only set when status is minor_revision or major_revision
+    },
+
+    // Add field to track original reviewer for major revisions
+    originalReviewer: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      // Set when assigning major revision decision
     },
 
     // Revision Tracking

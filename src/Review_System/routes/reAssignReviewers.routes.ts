@@ -11,8 +11,11 @@ const reassignSchema = z.object({
     reviewId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid review ID format'),
   }),
   body: z.object({
-      assignmentType: z.enum(['automatic', 'manual']),
-      newReviewerId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid reviewer ID format').optional(),
+    assignmentType: z.enum(['automatic', 'manual']),
+    newReviewerId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid reviewer ID format')
+      .optional(),
   }),
 });
 
@@ -39,10 +42,17 @@ router.get(
 );
 
 router.get(
-    '/existing-reviewers/:manuscriptId',
-    authenticateAdminToken,
-    validateRequest(manuscriptIdSchema),
-    reassignReviewController.getExistingReviewers
+  '/existing-reviewers/:manuscriptId',
+  authenticateAdminToken,
+  validateRequest(manuscriptIdSchema),
+  reassignReviewController.getExistingReviewers
+);
+
+router.get(
+  '/eligible-reviewers-revised/:manuscriptId',
+  authenticateAdminToken,
+  validateRequest(manuscriptIdSchema),
+  reassignReviewController.getEligibleReviewersForRevised
 );
 
 export default router;
