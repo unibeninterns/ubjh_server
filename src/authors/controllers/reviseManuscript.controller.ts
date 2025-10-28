@@ -11,6 +11,7 @@ import Review, {
   ReviewStatus,
   ReviewType,
 } from '../../Review_System/models/review.model';
+import mongoose from 'mongoose';
 
 // Interface for the new manuscript submission request
 interface IManuscriptRequest {
@@ -187,7 +188,11 @@ class ReviseController {
       res.status(200).json({
         success: true,
         message: 'Manuscript revised successfully and assigned for review.',
-        data: { manuscriptId: originalManuscript._id.toString() },
+        data: {
+          manuscriptId: (
+            originalManuscript._id as mongoose.Types.ObjectId
+          ).toString(),
+        },
       });
     }
   );

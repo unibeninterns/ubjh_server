@@ -9,6 +9,15 @@ import { NotFoundError, BadRequestError } from '../../utils/customErrors';
 import { getEligibleFaculties } from '../../utils/facultyClusters';
 import mongoose from 'mongoose';
 
+interface EligibleReviewer {
+  _id: string;
+  name: string;
+  email: string;
+  totalReviewsCount: number;
+  completionRate: number;
+  facultyTitle?: string;
+}
+
 interface IReassignReviewResponse {
   success: boolean;
   message?: string;
@@ -204,7 +213,7 @@ class ReassignReviewController {
         const eligibleReviewers: EligibleReviewer[] = [];
 
         // Add admin
-        const admin = await User.findOne({
+        const admin: IUser | null = await User.findOne({
           role: UserRole.ADMIN,
           isActive: true,
         });
@@ -217,7 +226,7 @@ class ReassignReviewController {
             status: ReviewStatus.COMPLETED,
           });
           eligibleReviewers.push({
-            _id: admin._id.toString(),
+            _id: (admin._id as mongoose.Types.ObjectId).toString(),
             name: admin.name,
             email: admin.email,
             totalReviewsCount: reviewCount,
@@ -228,7 +237,9 @@ class ReassignReviewController {
 
         // Add original reviewer if exists
         if (manuscript.originalReviewer) {
-          const reviewer = await User.findById(manuscript.originalReviewer);
+          const reviewer: IUser | null = await User.findById(
+            manuscript.originalReviewer
+          );
           if (reviewer) {
             const reviewCount = await Review.countDocuments({
               reviewer: reviewer._id,
@@ -239,7 +250,7 @@ class ReassignReviewController {
             });
 
             eligibleReviewers.push({
-              _id: reviewer._id.toString(),
+              _id: (reviewer._id as mongoose.Types.ObjectId).toString(),
               name: reviewer.name,
               email: reviewer.email,
               facultyTitle: reviewer.faculty,

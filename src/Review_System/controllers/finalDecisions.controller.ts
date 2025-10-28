@@ -47,20 +47,21 @@ class DecisionsController {
         {
           $match: {
             $or: [
-              // Manuscripts with completed reconciliation
+              // Manuscripts with a completed reconciliation review
               {
-                'reviews.reviewType': ReviewType.RECONCILIATION,
-                'reviews.status': ReviewStatus.COMPLETED,
-                status: ManuscriptStatus.IN_RECONCILIATION,
+                status: ManuscriptStatus.UNDER_REVIEW,
+                reviews: {
+                  $elemMatch: {
+                    reviewType: ReviewType.RECONCILIATION,
+                    status: ReviewStatus.COMPLETED,
+                  },
+                },
               },
               // Manuscripts with 2 completed human reviews (no discrepancy)
               {
+                status: ManuscriptStatus.UNDER_REVIEW,
                 $and: [
-                  { 'reviews.reviewType': ReviewType.HUMAN },
-                  { 'reviews.status': ReviewStatus.COMPLETED },
-                  { 'reviews.1': { $exists: true } },
-                  { status: ManuscriptStatus.UNDER_REVIEW },
-                  // Check no discrepancy
+                  { 'reviews.1': { $exists: true } }, // Ensures at least 2 reviews
                   {
                     $expr: {
                       $let: {
@@ -79,17 +80,22 @@ class DecisionsController {
                           },
                         },
                         in: {
-                          $eq: [
+                          $and: [
+                            { $eq: [{ $size: '$$humanReviews' }, 2] }, // Exactly 2 completed human reviews
                             {
-                              $arrayElemAt: [
-                                '$$humanReviews.reviewDecision',
-                                0,
-                              ],
-                            },
-                            {
-                              $arrayElemAt: [
-                                '$$humanReviews.reviewDecision',
-                                1,
+                              $eq: [
+                                {
+                                  $arrayElemAt: [
+                                    '$$humanReviews.reviewDecision',
+                                    0,
+                                  ],
+                                },
+                                {
+                                  $arrayElemAt: [
+                                    '$$humanReviews.reviewDecision',
+                                    1,
+                                  ],
+                                },
                               ],
                             },
                           ],
@@ -145,6 +151,7 @@ class DecisionsController {
       const manuscript = await Manuscript.findById(manuscriptId).populate(
         'submitter coAuthors'
       );
+
 
       if (!manuscript) {
         throw new NotFoundError('Manuscript not found');

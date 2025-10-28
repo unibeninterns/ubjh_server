@@ -109,11 +109,23 @@ class ManuscriptReviewsController {
                       },
                     },
                   },
+                  completedReconciliationReviews: {
+                    $filter: {
+                      input: '$reviews',
+                      as: 'review',
+                      cond: {
+                        $and: [
+                          { $eq: ['$$review.status', 'completed'] },
+                          { $eq: ['$$review.reviewType', 'reconciliation'] },
+                        ],
+                      },
+                    },
+                  },
                 },
                 in: {
-                  $cond: {
-                    if: { $gte: [{ $size: '$$completedHumanReviews' }, 2] },
-                    then: {
+                  $and: [
+                    { $gte: [{ $size: '$$completedHumanReviews' }, 2] },
+                    {
                       $ne: [
                         {
                           $arrayElemAt: [
@@ -129,8 +141,8 @@ class ManuscriptReviewsController {
                         },
                       ],
                     },
-                    else: false,
-                  },
+                    { $eq: [{ $size: '$$completedReconciliationReviews' }, 0] },
+                  ],
                 },
               },
             },
@@ -320,9 +332,15 @@ class ManuscriptReviewsController {
           (r: any) => r.reviewType === 'human' && r.status === 'completed'
         );
 
+        const reconciliationReviews = manuscript.reviews.filter(
+          (r: any) =>
+            r.reviewType === 'reconciliation' && r.status === 'completed'
+        );
+
         if (humanReviews.length >= 2) {
           if (
-            humanReviews[0].reviewDecision !== humanReviews[1].reviewDecision
+            humanReviews[0].reviewDecision !== humanReviews[1].reviewDecision &&
+            reconciliationReviews.length === 0
           ) {
             withDiscrepancy++;
           }

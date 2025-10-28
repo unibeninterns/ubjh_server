@@ -35,6 +35,19 @@ class ReconciliationController {
     }
 
     // Discrepancy found, assign reconciliation reviewer
+    const existingReconciliation = await Review.findOne({
+      manuscript: manuscriptId,
+      reviewType: ReviewType.RECONCILIATION,
+    });
+
+    if (existingReconciliation) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: 'A reconciliation review has already been assigned.',
+        });
+    }
     const manuscript = await Manuscript.findById(manuscriptId).populate('submitter');
     if (!manuscript) {
       throw new NotFoundError('Manuscript not found');

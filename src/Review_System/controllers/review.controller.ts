@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Review, { ReviewStatus, ReviewType } from '../models/review.model';
+import Manuscript, { ManuscriptStatus } from '../../Manuscript_Submission/models/manuscript.model';
 import { NotFoundError } from '../../utils/customErrors';
 import asyncHandler from '../../utils/asyncHandler';
 import reconciliationController from './reconciliation.controller';
@@ -94,6 +95,20 @@ class ReviewController {
       review.completedAt = new Date();
 
       await review.save();
+
+      if (review.reviewType === ReviewType.RECONCILIATION) {
+        const manuscript = await Manuscript.findById(review.manuscript);
+        if (manuscript) {
+          manuscript.status = ManuscriptStatus.UNDER_REVIEW;
+          await manuscript.save();
+        }
+        res.status(200).json({
+          success: true,
+          message: 'Reconciliation review submitted successfully',
+          data: review,
+        });
+        return;
+      }
 
       // Check for discrepancy if this is the second human review
       const humanReviews = await Review.find({
