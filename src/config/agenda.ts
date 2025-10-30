@@ -2,7 +2,7 @@ import Agenda, { Job } from 'agenda';
 import Article from '../Articles/model/article.model';
 import FailedJob, { JobType } from '../Publication/models/failedJob.model';
 import EmailSubscriber from '../Publication/models/emailSubscriber.model';
-import zenodoService from '../Publication/services/zenodo.service';
+import crossrefService from '../Publication/services/crossref.service';
 import internetArchiveService from '../Publication/services/internetArchive.service';
 import indexingService from '../Publication/services/indexing.service';
 import emailService from '../services/email.service';
@@ -64,7 +64,9 @@ agenda.define(
 
       const article = await Article.findById(articleId)
         .populate('author', 'name email affiliation orcid')
-        .populate('coAuthors', 'name email affiliation orcid');
+        .populate('coAuthors', 'name email affiliation orcid')
+        .populate('volume')
+        .populate('issue');
 
       if (!article) {
         throw new Error('Article not found');
@@ -76,15 +78,22 @@ agenda.define(
       }
 
       const authors = [article.author, ...(article.coAuthors || [])];
+      const volume = article.volume as any;
+      const issue = article.issue as any;
 
-      // Register with Zenodo
-      const { doi, depositionId, recordId } =
-        await zenodoService.registerArticle(article, authors, pdfPath);
+      // Register with Crossref (CHANGED FROM ZENODO)
+      const { doi, batchId } = await crossrefService.registerDOI(
+        article,
+        authors,
+        volume,
+        issue
+      );
 
-      // Update article with DOI
+      // Update article with DOI and Crossref info
       article.doi = doi;
-      article.zenodoDepositId = depositionId.toString();
-      article.zenodoRecordId = recordId.toString();
+      article.crossrefBatchId = batchId;
+      article.crossrefDepositDate = new Date();
+      article.crossrefStatus = 'registered';
       await article.save();
 
       logger.info(`DOI registered for article ${articleId}: ${doi}`);
@@ -103,6 +112,17 @@ agenda.define(
         `DOI registration failed for article ${articleId}:`,
         error.message
       );
+
+      // Update Crossref status to failed
+      try {
+        const article = await Article.findById(articleId);
+        if (article) {
+          article.crossrefStatus = 'failed';
+          await article.save();
+        }
+      } catch (updateError) {
+        logger.error('Failed to update article status:', updateError);
+      }
 
       // Create or update failed job record
       if (failedJobId) {

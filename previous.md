@@ -4,3 +4,14 @@ check the current backend implementations and compare it with the Implementation
 The search functionality and page in the frontend will be nice to have for advanced searching, i think something about this was in the context.md file, I don't know if the controllers the authors will need are done already to display the authors published articles in his dashboard when he logs in, you can check the javascript server researcher.controller as context. The search page will have it's own page that probably triggers when you search from the header in the main app page.tsx I think.
 before you start all this just generate a very brief plan on everything you need to do from start to finish both for the backend and the frontend in steps, like from the first step till the last step, just a short document, to avoid hallucinations later if you hit a limit for generating and need to continue later so it can be referenced. (use deep reason).
 Think and reason carefully, take your time.
+
+is this useful?: You would use this in the part of your code that updates the article, for example:
+
+1 // Example of atomically incrementing the view count
+2 await Article.findByIdAndUpdate(articleId, { $inc: { 'views.count': 1 } });
+3
+4 // Example of atomically incrementing the citation count
+5 await Article.findByIdAndUpdate(articleId, { $inc: { citationCount: 1 } });
+
+This change doesn't require any modification to your article.model.ts file, but to the services or controllers
+that handle article views and citations.
