@@ -33,6 +33,9 @@ export interface IArticle extends Document {
   // Publication Details
   publishDate: Date;
   doi?: string;
+  crossrefBatchId?: string;
+  crossrefDepositDate?: Date;
+  crossrefStatus?: 'pending' | 'registered' | 'failed';
   volume: Types.ObjectId;
   issue: Types.ObjectId;
   articleType: ArticleType;
@@ -59,10 +62,6 @@ export interface IArticle extends Document {
   // Publication Status
   isPublished: boolean;
   publishedAt?: Date;
-
-  // Zenodo Integration
-  zenodoDepositId?: string;
-  zenodoRecordId?: string;
 
   // Indexing Status
   indexingStatus: {
@@ -128,6 +127,19 @@ const ArticleSchema: Schema<IArticle> = new Schema(
       sparse: true,
       unique: true,
     },
+    // Crossref Integration
+    crossrefBatchId: {
+      type: String,
+    },
+    crossrefDepositDate: {
+      type: Date,
+    },
+    crossrefStatus: {
+      type: String,
+      enum: ['pending', 'registered', 'failed'],
+      default: 'pending',
+    },
+
     volume: {
       type: Schema.Types.ObjectId,
       ref: 'Volume',
@@ -220,13 +232,6 @@ const ArticleSchema: Schema<IArticle> = new Schema(
       type: Date,
     },
 
-    zenodoDepositId: {
-      type: String,
-    },
-    zenodoRecordId: {
-      type: String,
-    },
-
     indexingStatus: {
       googleScholar: {
         type: Boolean,
@@ -257,7 +262,6 @@ ArticleSchema.index({ publishDate: -1 });
 ArticleSchema.index({ author: 1 });
 ArticleSchema.index({ coAuthors: 1 });
 ArticleSchema.index({ volume: 1, issue: 1 });
-ArticleSchema.index({ doi: 1 });
 ArticleSchema.index({ isPublished: 1 });
 ArticleSchema.index({ articleType: 1 });
 
