@@ -1,5 +1,6 @@
 import express from 'express';
 import adminController from '../controllers/admin.controller';
+import { parseManuscriptRequest } from '../middleware/parseManuscriptRequest';
 import {
   authenticateAdminToken,
   rateLimiter,
@@ -55,6 +56,22 @@ router.post(
   authenticateAdminToken,
   adminRateLimiter,
   adminController.assignFaculty
+);
+
+router.put(
+  '/manuscripts/:id/edit',
+  authenticateAdminToken,
+  adminRateLimiter,
+  parseManuscriptRequest,
+  adminController.editManuscript
+);
+
+router.put(
+  '/manuscripts/:id/edit-revised',
+  authenticateAdminToken,
+  adminRateLimiter,
+  parseManuscriptRequest,
+  adminController.editRevisedManuscript
 );
 
 router.use('/author-management', authorManagementRoutes);

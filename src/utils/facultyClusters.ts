@@ -116,7 +116,7 @@ export function getClusterStatistics(): {
   totalFaculties: number;
   averageConnections: number;
   faculties: string[];
-} {
+  } {
   const faculties = Object.keys(humanitiesCluster);
   const totalFaculties = faculties.length;
 

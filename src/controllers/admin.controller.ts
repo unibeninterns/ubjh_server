@@ -1,10 +1,12 @@
 /* eslint-disable max-lines */
 import { Request, Response } from 'express';
-import Manuscript from '../Manuscript_Submission/models/manuscript.model';
+import Manuscript, { ManuscriptStatus } from '../Manuscript_Submission/models/manuscript.model';
 import { NotFoundError, UnauthorizedError } from '../utils/customErrors';
 import asyncHandler from '../utils/asyncHandler';
 import logger from '../utils/logger';
 import User from '../model/user.model';
+import Review from '../Review_System/models/review.model';
+import emailService from '../services/email.service';
 import {
   getFacultyDepartmentData,
   isFacultyInCluster,
@@ -375,6 +377,46 @@ class AdminController {
     }
   );
 
+  editManuscript = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const user = (req as AdminAuthenticatedRequest).user;
+      if (user.role !== 'admin') {
+        throw new UnauthorizedError(
+          'You do not have permission to access this resource'
+        );
+      }
+
+      const { id } = req.params;
+      const manuscript = await Manuscript.findById(id);
+
+      if (!manuscript) {
+        throw new NotFoundError('Manuscript not found');
+      }
+
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          message: 'No file uploaded.',
+        });
+        return;
+      }
+
+      // Move the old file path to originPdfFile and update the pdfFile with the new path
+      manuscript.originPdfFile = manuscript.pdfFile;
+      manuscript.pdfFile = req.file.path;
+
+      await manuscript.save();
+
+      logger.info(`Admin ${user.id} edited manuscript ${id}`);
+
+      res.status(200).json({
+        success: true,
+        message: 'Manuscript edited successfully.',
+        data: manuscript,
+      });
+    }
+  );
+
   // Assign a faculty to a user or a manuscript's submitter
   assignFaculty = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
@@ -486,6 +528,113 @@ class AdminController {
           message: 'Failed to retrieve faculties with manuscripts',
         });
       }
+    }
+  );
+
+  editRevisedManuscript = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { id } = req.params;
+
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          message: 'Manuscript PDF file is required.',
+        });
+        return;
+      }
+
+      const manuscript = await Manuscript.findById(id).populate('submitter');
+      if (!manuscript) {
+        throw new NotFoundError('Manuscript not found');
+      }
+
+      // Move the old revised file path to originRevisedPdfFile
+      if (manuscript.revisedPdfFile) {
+        manuscript.originRevisedPdfFile = manuscript.revisedPdfFile;
+      }
+
+      const pdfFile = `${
+        process.env.API_URL || 'http://localhost:3000'
+      }/uploads/documents/${req.file.filename}`;
+
+      manuscript.revisedPdfFile = pdfFile;
+
+      // Reset status to under_review for re-review
+      const isMinorRevision = manuscript.revisionType === 'minor';
+      manuscript.status = ManuscriptStatus.UNDER_REVIEW;
+
+      await manuscript.save();
+
+      // Auto-assign based on revision type
+      if (isMinorRevision) {
+        // Assign to admin for minor revision
+        const admin = await User.findOne({
+          role: 'admin',
+          isActive: true,
+        });
+        if (admin) {
+          const dueDate = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
+          const review = new Review({
+            manuscript: manuscript._id,
+            reviewer: admin._id,
+            reviewType: 'human',
+            status: 'in_progress',
+            dueDate,
+          });
+          await review.save();
+
+          try {
+            await emailService.sendReviewAssignmentEmail(
+              admin.email,
+              manuscript.title,
+              (manuscript.submitter as any).name,
+              dueDate
+            );
+          } catch (error) {
+            logger.error(
+              'Failed to send admin review assignment email:',
+              error
+            );
+          }
+        }
+      } else if (manuscript.originalReviewer) {
+        // Assign to original reviewer for major revision
+        const dueDate = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
+        const review = new Review({
+          manuscript: manuscript._id,
+          reviewer: manuscript.originalReviewer,
+          reviewType: 'human',
+          status: 'in_progress',
+          dueDate,
+        });
+        await review.save();
+
+        const reviewer = await User.findById(
+          manuscript.originalReviewer
+        );
+        if (reviewer) {
+          try {
+            await emailService.sendReviewAssignmentEmail(
+              reviewer.email,
+              manuscript.title,
+              (manuscript.submitter as any).name,
+              dueDate
+            );
+          } catch (error) {
+            logger.error('Failed to send reviewer assignment email:', error);
+          }
+        }
+      }
+
+      logger.info(`Revised manuscript ${id} has been edited and re-assigned.`);
+
+      res.status(200).json({
+        success: true,
+        message: 'Manuscript edited successfully and assigned for review.',
+        data: {
+          manuscriptId: (manuscript._id as any).toString(),
+        },
+      });
     }
   );
 }

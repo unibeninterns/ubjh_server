@@ -64,9 +64,7 @@ class CitationService {
   ): string {
     const year = article.publishDate.getFullYear();
     const authorStr = this.formatAuthorsAPA(authors);
-    const pages = article.pages
-      ? `${article.pages.start}–${article.pages.end}`
-      : '';
+    const pages = article.pages ? `${article.pages.start}–${article.pages.end}` : '';
 
     let citation = `${authorStr} (${year}). ${article.title}. UNIBEN Journal of Humanities, ${volume.volumeNumber}(${issue.issueNumber})`;
 
@@ -91,9 +89,7 @@ class CitationService {
     issue: any
   ): string {
     const authorStr = this.formatAuthorsMLA(authors);
-    const pages = article.pages
-      ? `pp. ${article.pages.start}–${article.pages.end}`
-      : '';
+    const pages = article.pages ? `pp. ${article.pages.start}–${article.pages.end}` : '';
 
     let citation = `${authorStr}. "${article.title}." UNIBEN Journal of Humanities, vol. ${volume.volumeNumber}, no. ${issue.issueNumber}, ${article.publishDate.getFullYear()}`;
 
@@ -120,9 +116,7 @@ class CitationService {
     issue: any
   ): string {
     const authorStr = this.formatAuthorsAPA(authors);
-    const pages = article.pages
-      ? `${article.pages.start}–${article.pages.end}`
-      : '';
+    const pages = article.pages ? `${article.pages.start}–${article.pages.end}` : '';
 
     let citation = `${authorStr}. "${article.title}." UNIBEN Journal of Humanities ${volume.volumeNumber}, no. ${issue.issueNumber} (${article.publishDate.getFullYear()})`;
 
@@ -150,9 +144,7 @@ class CitationService {
   ): string {
     const year = article.publishDate.getFullYear();
     const authorStr = this.formatAuthorsAPA(authors);
-    const pages = article.pages
-      ? `pp.${article.pages.start}–${article.pages.end}`
-      : '';
+    const pages = article.pages ? `pp.${article.pages.start}–${article.pages.end}` : '';
 
     let citation = `${authorStr}, ${year}. ${article.title}. UNIBEN Journal of Humanities, ${volume.volumeNumber}(${issue.issueNumber})`;
 
@@ -179,9 +171,7 @@ class CitationService {
 
     const authorList = authors.map((a) => a.name).join(' and ');
 
-    const pages = article.pages
-      ? `  pages = {${article.pages.start}--${article.pages.end}},\n`
-      : '';
+    const pages = article.pages ? `  pages = {${article.pages.start}--${article.pages.end}},\n` : '';
 
     const doi = article.doi ? `  doi = {${article.doi}},\n` : '';
 
@@ -206,9 +196,7 @@ ${pages}${doi}  publisher = {University of Benin}
     issue: any
   ): string {
     const year = article.publishDate.getFullYear();
-    const pages = article.pages
-      ? `SP  - ${article.pages.start}\nEP  - ${article.pages.end}\n`
-      : '';
+    const pages = article.pages ? `SP  - ${article.pages.start}\nEP  - ${article.pages.end}\n` : '';
 
     const authorLines = authors.map((a) => `AU  - ${a.name}`).join('\n');
     const doi = article.doi ? `DO  - ${article.doi}\n` : '';

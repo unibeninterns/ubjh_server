@@ -121,12 +121,10 @@ class CrossrefService {
       })
       .join('\n');
 
-    const pages = article.pages
-      ? `<pages>
+    const pages = article.pages ? `<pages>
           <first_page>${article.pages.start}</first_page>
           <last_page>${article.pages.end}</last_page>
-        </pages>`
-      : '';
+        </pages>` : '';
 
     return `<?xml version="1.0" encoding="UTF-8"?>
 <doi_batch xmlns="http://www.crossref.org/schema/5.3.1"
@@ -237,9 +235,9 @@ class CrossrefService {
         {
           headers: {
             'User-Agent':
-              'UNIBEN-Journal-Humanities/1.0 (mailto:' +
-              this.depositorEmail +
-              ')',
+              `UNIBEN-Journal-Humanities/1.0 (mailto:${ 
+                this.depositorEmail 
+              })`,
           },
         }
       );
@@ -257,7 +255,7 @@ class CrossrefService {
       '<': '&lt;',
       '>': '&gt;',
       '"': '&quot;',
-      "'": '&#039;',
+      '\'': '&#039;',
     };
     return text.replace(/[&<>"']/g, (m) => map[m]);
   }

@@ -37,9 +37,7 @@ export const createAdminUser = async (): Promise<void> => {
     // Create admin user with required fields
     const adminData: IUser = {
       name: process.env.ADMIN_NAME || 'System Administrator',
-      email: process.env.ADMIN_EMAIL.endsWith('.uniben.edu')
-        ? process.env.ADMIN_EMAIL
-        : `${process.env.ADMIN_EMAIL.split('@')[0]}@admin.uniben.edu`,
+      email: process.env.ADMIN_EMAIL.endsWith('.uniben.edu') ? process.env.ADMIN_EMAIL : `${process.env.ADMIN_EMAIL.split('@')[0]}@admin.uniben.edu`,
       password: process.env.ADMIN_PASSWORD,
       role: 'admin',
       isActive: true,

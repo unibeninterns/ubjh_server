@@ -1,4 +1,4 @@
-/* eslint-disable max-lines */
+ 
 import { Request, Response } from 'express';
 import User, { UserRole, IUser } from '../../model/user.model';
 import Manuscript, {
@@ -82,7 +82,7 @@ class AssignReviewController {
         }
         const selectedReviewerId: Types.ObjectId = selectedReviewer!._id as Types.ObjectId;
         if (existingReviews.some(r => r.reviewer.equals(selectedReviewerId))) {
-            throw new BadRequestError('This reviewer is already assigned to this manuscript.');
+          throw new BadRequestError('This reviewer is already assigned to this manuscript.');
         }
 
       } else { // Automatic assignment
@@ -95,7 +95,7 @@ class AssignReviewController {
 
         const eligibleFaculties = getEligibleFaculties(submitterFaculty);
         if (eligibleFaculties.length === 0) {
-            throw new BadRequestError("Cannot assign reviewers: No eligible faculties found for the manuscript's cluster");
+          throw new BadRequestError('Cannot assign reviewers: No eligible faculties found for the manuscript\'s cluster');
         }
 
         const existingReviewerIds = existingReviews.map(r => r.reviewer);
@@ -153,14 +153,14 @@ class AssignReviewController {
         ]);
 
         if (eligibleReviewers.length === 0) {
-            // Return eligible reviewers for manual assignment
-            const allEligible = await this.getEligibleReviewersForManuscript(manuscriptId);
-            res.status(400).json({
-                success: false,
-                message: 'Could not find an eligible reviewer automatically. Please select one manually.',
-                data: { eligibleReviewers: allEligible }
-            });
-            return;
+          // Return eligible reviewers for manual assignment
+          const allEligible = await this.getEligibleReviewersForManuscript(manuscriptId);
+          res.status(400).json({
+            success: false,
+            message: 'Could not find an eligible reviewer automatically. Please select one manually.',
+            data: { eligibleReviewers: allEligible }
+          });
+          return;
         }
         selectedReviewer = eligibleReviewers[0];
       }
@@ -208,7 +208,7 @@ class AssignReviewController {
 
       res.status(200).json({
         success: true,
-        message: `Manuscript assigned to reviewer successfully`,
+        message: 'Manuscript assigned to reviewer successfully',
         data: {
           reviewer: {
             id: selectedReviewer._id,
@@ -223,11 +223,11 @@ class AssignReviewController {
 
   getEligibleReviewers = asyncHandler(
     async (req: Request<{ manuscriptId: string }>, res: Response): Promise<void> => {
-        const reviewers = await this.getEligibleReviewersForManuscript(req.params.manuscriptId);
-        res.status(200).json({
-            success: true,
-            data: reviewers,
-        });
+      const reviewers = await this.getEligibleReviewersForManuscript(req.params.manuscriptId);
+      res.status(200).json({
+        success: true,
+        data: reviewers,
+      });
     }
   );
 

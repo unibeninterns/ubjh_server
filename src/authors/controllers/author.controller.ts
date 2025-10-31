@@ -379,9 +379,7 @@ class AuthorController {
         status: invitation.invitationStatus,
         created: invitation.createdAt.toISOString().split('T')[0],
         assignedFaculty: invitation.assignedFaculty ?? null,
-        expires: invitation.inviteTokenExpires
-          ? invitation.inviteTokenExpires.toISOString().split('T')[0]
-          : null,
+        expires: invitation.inviteTokenExpires ? invitation.inviteTokenExpires.toISOString().split('T')[0] : null,
       }));
 
       logger.info(`Admin ${user._id} retrieved author invitations list`);

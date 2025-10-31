@@ -103,71 +103,6 @@ class ReviseController {
 
       await originalManuscript.save();
 
-      // Auto-assign based on revision type
-      if (isMinorRevision) {
-        // Assign to admin for minor revision
-        const admin = await User.findOne({
-          role: UserRole.ADMIN,
-          isActive: true,
-        });
-        if (admin) {
-          const dueDate = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
-          const review = new Review({
-            manuscript: originalManuscript._id,
-            reviewer: admin._id,
-            reviewType: ReviewType.HUMAN,
-            status: ReviewStatus.IN_PROGRESS,
-            dueDate,
-          });
-          await review.save();
-          originalManuscript.status = ManuscriptStatus.UNDER_REVIEW;
-          await originalManuscript.save();
-
-          try {
-            await emailService.sendReviewAssignmentEmail(
-              admin.email,
-              title,
-              submitter.name,
-              dueDate
-            );
-          } catch (error) {
-            logger.error(
-              'Failed to send admin review assignment email:',
-              error
-            );
-          }
-        }
-      } else if (originalManuscript.originalReviewer) {
-        // Assign to original reviewer for major revision
-        const dueDate = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
-        const review = new Review({
-          manuscript: originalManuscript._id,
-          reviewer: originalManuscript.originalReviewer,
-          reviewType: ReviewType.HUMAN,
-          status: ReviewStatus.IN_PROGRESS,
-          dueDate,
-        });
-        await review.save();
-        originalManuscript.status = ManuscriptStatus.UNDER_REVIEW;
-        await originalManuscript.save();
-
-        const reviewer = await User.findById(
-          originalManuscript.originalReviewer
-        );
-        if (reviewer) {
-          try {
-            await emailService.sendReviewAssignmentEmail(
-              reviewer.email,
-              title,
-              submitter.name,
-              dueDate
-            );
-          } catch (error) {
-            logger.error('Failed to send reviewer assignment email:', error);
-          }
-        }
-      }
-
       // Send confirmation email
       try {
         await emailService.sendSubmissionConfirmationEmail(
@@ -187,7 +122,7 @@ class ReviseController {
 
       res.status(200).json({
         success: true,
-        message: 'Manuscript revised successfully and assigned for review.',
+        message: 'Manuscript revised successfully.',
         data: {
           manuscriptId: (
             originalManuscript._id as mongoose.Types.ObjectId

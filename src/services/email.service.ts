@@ -80,9 +80,7 @@ class EmailService {
     manuscriptTitle: string,
     isRevision = false
   ): Promise<void> {
-    const subject = isRevision
-      ? 'Confirmation of Manuscript Revision'
-      : 'Confirmation of Manuscript Submission';
+    const subject = isRevision ? 'Confirmation of Manuscript Revision' : 'Confirmation of Manuscript Submission';
     const loginUrl = `${this.frontendUrl}/author/login`;
 
     try {

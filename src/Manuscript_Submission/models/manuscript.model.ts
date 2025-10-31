@@ -34,6 +34,8 @@ export interface IManuscript extends Document {
   fileSize: number; // In bytes
   fileType: string; // MIME type
   revisedPdfFile?: string; // URL path to revised PDF, if applicable
+  originPdfFile?: string;
+  originRevisedPdfFile?: string;
 
   // Authorship
   submitter: Types.ObjectId; // Reference to User (primary author)
@@ -91,9 +93,6 @@ const ManuscriptSchema: Schema<IManuscript> = new Schema(
     pdfFile: {
       type: String,
       required: [true, 'PDF file is required'],
-      revisedPdfFile: {
-        type: String, // Only present if this is a revised submission
-      },
     },
     originalFilename: {
       type: String,
@@ -107,6 +106,15 @@ const ManuscriptSchema: Schema<IManuscript> = new Schema(
       type: String,
       required: true,
       default: 'application/pdf',
+    },
+    revisedPdfFile: {
+      type: String, // Only present if this is a revised submission
+    },
+    originPdfFile: {
+      type: String,
+    },
+    originRevisedPdfFile: {
+      type: String,
     },
 
     // Authorship

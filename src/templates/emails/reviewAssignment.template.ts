@@ -25,13 +25,13 @@ export const reviewAssignmentTemplate = (
         <p>Please log in to the research portal to access the full manuscript and complete your review at your earliest convenience.</p>
 
         <p class="deadline-notice">Please complete your review by <strong>${new Date(
-          dueDate
-        ).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        })}</strong>.</p>
+    dueDate
+  ).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })}</strong>.</p>
         
         <a href="${reviewUrl}" class="button">Review Manuscript Now</a>
         

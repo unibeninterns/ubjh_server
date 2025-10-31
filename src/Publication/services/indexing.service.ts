@@ -108,9 +108,7 @@ class IndexingService {
       )
       .join('\n');
 
-    const doiXML = article.doi
-      ? `    <dc:identifier>https://doi.org/${article.doi}</dc:identifier>`
-      : '';
+    const doiXML = article.doi ? `    <dc:identifier>https://doi.org/${article.doi}</dc:identifier>` : '';
 
     return `<?xml version="1.0" encoding="UTF-8"?>
 <record>
@@ -203,7 +201,7 @@ ${doiXML}
       '<': '&lt;',
       '>': '&gt;',
       '"': '&quot;',
-      "'": '&#039;',
+      '\'': '&#039;',
     };
     return text.replace(/[&<>"']/g, (m) => map[m]);
   }

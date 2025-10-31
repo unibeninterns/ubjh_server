@@ -33,13 +33,13 @@ export const reviewReminderTemplate = (
         <div class="proposal-title">"${proposalTitle}"</div>
         
         <p class="deadline-notice">Is due by <strong>${new Date(
-          dueDate
-        ).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        })}</strong> (in 2 days).</p>
+    dueDate
+  ).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })}</strong> (in 2 days).</p>
         
         <p>Please log in to the research portal to complete your review as soon as possible.</p>
         

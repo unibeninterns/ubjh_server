@@ -159,11 +159,11 @@ class ArticleAnalyticsController {
     async (req: Request, res: Response): Promise<void> => {
       const { limit = 10, period = 'all', sortBy = 'views' } = req.query;
 
-      let query: any = { isPublished: true };
+      const query: any = { isPublished: true };
 
       // Filter by period if specified
       if (period !== 'all') {
-        let dateFilter = new Date();
+        const dateFilter = new Date();
         switch (period) {
           case 'day':
             dateFilter.setDate(dateFilter.getDate() - 1);
