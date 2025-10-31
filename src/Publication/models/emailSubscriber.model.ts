@@ -44,7 +44,6 @@ const EmailSubscriberSchema: Schema<IEmailSubscriber> = new Schema(
 );
 
 // Indexes
-EmailSubscriberSchema.index({ email: 1 });
 EmailSubscriberSchema.index({ isActive: 1 });
 
 export default mongoose.model<IEmailSubscriber>(

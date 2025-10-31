@@ -5,12 +5,14 @@ import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 
 class ArticleAnalyticsController {
-  // Record article view
   recordView = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { id } = req.params;
+      const xForwardedFor = req.headers['x-forwarded-for'];
       const visitorIdentifier =
-        req.ip || req.headers['x-forwarded-for'] || 'unknown';
+        req.ip ||
+        (Array.isArray(xForwardedFor) ? xForwardedFor[0] : xForwardedFor) ||
+        'unknown';
 
       const article = await Article.findOne({ _id: id, isPublished: true });
 
@@ -54,8 +56,11 @@ class ArticleAnalyticsController {
   recordDownload = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { id } = req.params;
+      const xForwardedFor = req.headers['x-forwarded-for'];
       const visitorIdentifier =
-        req.ip || req.headers['x-forwarded-for'] || 'unknown';
+        req.ip ||
+        (Array.isArray(xForwardedFor) ? xForwardedFor[0] : xForwardedFor) ||
+        'unknown';
 
       const article = await Article.findOne({ _id: id, isPublished: true });
 
@@ -217,14 +222,21 @@ class ArticleAnalyticsController {
         throw new NotFoundError('Article not found');
       }
 
-      article.citationCount += 1;
-      await article.save();
+      const updatedArticle = await Article.findByIdAndUpdate(
+        id,
+        { $inc: { citationCount: 1 } },
+        { new: true }
+      );
+
+      if (!updatedArticle) {
+        throw new NotFoundError('Article not found');
+      }
 
       logger.info(`Incremented citation count for article ${id}`);
 
       res.status(200).json({
         success: true,
-        citationCount: article.citationCount,
+        citationCount: updatedArticle.citationCount,
       });
     }
   );

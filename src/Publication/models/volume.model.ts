@@ -47,7 +47,6 @@ const VolumeSchema: Schema<IVolume> = new Schema(
 );
 
 // Indexes
-VolumeSchema.index({ volumeNumber: 1 });
 VolumeSchema.index({ year: -1 });
 VolumeSchema.index({ isActive: 1 });
 

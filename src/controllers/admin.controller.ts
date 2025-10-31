@@ -50,7 +50,6 @@ class AdminController {
   getAllManuscripts = asyncHandler(
     async (req: Request, res: Response<IManuscriptResponse>): Promise<void> => {
       const user = (req as AdminAuthenticatedRequest).user;
-      // Check if user is admin
       if (user.role !== 'admin') {
         throw new UnauthorizedError(
           'You do not have permission to access this resource'
@@ -67,15 +66,79 @@ class AdminController {
       } = req.query;
 
       const query: IManuscriptQuery = {};
-
-      // Apply filters if provided
       if (status) query.status = status as string;
 
-      // Handle duplicates sorting - when sort is 'duplicates'
+      const sortObj: Record<string, 1 | -1> = {};
+      if (sort !== 'duplicates') {
+        sortObj[sort as string] = order === 'asc' ? 1 : -1;
+      }
+
+      const options: IPaginationOptions = {
+        page: parseInt(page as string, 10),
+        limit: parseInt(limit as string, 10),
+        sort: sortObj,
+      };
+
+      const reviewProcessCompletedStage = {
+        $addFields: {
+          isReviewProcessCompleted: {
+            $or: [
+              {
+                $anyElementTrue: [
+                  {
+                    $map: {
+                      input: '$reviews',
+                      as: 'review',
+                      in: {
+                        $and: [
+                          { $eq: ['$$review.reviewType', 'reconciliation'] },
+                          { $eq: ['$$review.status', 'completed'] },
+                        ],
+                      },
+                    },
+                  },
+                ],
+              },
+              {
+                $let: {
+                  vars: {
+                    humanReviews: {
+                      $filter: {
+                        input: '$reviews',
+                        as: 'review',
+                        cond: {
+                          $and: [
+                            { $eq: ['$$review.reviewType', 'human'] },
+                            { $eq: ['$$review.status', 'completed'] },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  in: {
+                    $and: [
+                      { $eq: [{ $size: '$$humanReviews' }, 2] },
+                      {
+                        $eq: [
+                          { $arrayElemAt: ['$$humanReviews.reviewDecision', 0] },
+                          { $arrayElemAt: ['$$humanReviews.reviewDecision', 1] },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      };
+
+      let pipeline: PipelineStage[] = [];
+      let countPipeline: PipelineStage[] = [];
+
       if (sort === 'duplicates') {
-        // Find submitters who have more than one manuscript
         const duplicateSubmitters = await Manuscript.aggregate([
-          { $match: query }, // Apply existing filters first
+          { $match: query },
           { $group: { _id: '$submitter', count: { $sum: 1 } } },
           { $match: { count: { $gt: 1 } } },
           { $project: { submitter: '$_id' } },
@@ -86,28 +149,21 @@ class AdminController {
         );
 
         if (duplicateSubmitterIds.length === 0) {
-          // No duplicates found, return empty result
-          logger.info(
-            `Admin ${user.id} retrieved manuscripts list - no duplicates found`
-          );
           res.status(200).json({
             success: true,
             count: 0,
             totalPages: 0,
-            currentPage: parseInt(page as string, 10),
+            currentPage: options.page,
             data: [],
           });
           return;
         }
 
-        // Build aggregation pipeline for grouped results by submitter
-        const pipeline = [
-          {
-            $match: {
-              ...query,
-              submitter: { $in: duplicateSubmitterIds },
-            },
-          },
+        const matchStage = {
+          $match: { ...query, submitter: { $in: duplicateSubmitterIds } },
+        };
+        pipeline = [
+          matchStage,
           {
             $lookup: {
               from: 'Users',
@@ -116,90 +172,7 @@ class AdminController {
               as: 'submitterData',
             },
           },
-          {
-            $unwind: '$submitterData',
-          },
-          {
-            $sort: {
-              'submitterData.name': order === 'asc' ? 1 : -1,
-              createdAt: -1,
-            },
-          },
-          {
-            $skip:
-              (parseInt(page as string, 10) - 1) *
-              parseInt(limit as string, 10),
-          },
-          {
-            $limit: parseInt(limit as string, 10),
-          },
-          {
-            $project: {
-              _id: 1,
-              title: 1,
-              status: 1,
-              createdAt: 1,
-              submitter: {
-                _id: '$submitterData._id',
-                name: '$submitterData.name',
-                email: '$submitterData.email',
-                assignedFaculty: '$submitterData.assignedFaculty',
-              },
-              assignedReviewerCount: { $size: '$reviews' },
-            },
-          },
-        ];
-
-        const manuscripts = await Manuscript.aggregate(
-          pipeline as PipelineStage[]
-        );
-
-        const totalManuscripts = await Manuscript.countDocuments({
-          ...query,
-          submitter: { $in: duplicateSubmitterIds },
-        });
-
-        logger.info(
-          `Admin ${user.id} retrieved manuscripts list sorted by duplicates`
-        );
-
-        res.status(200).json({
-          success: true,
-          count: manuscripts.length,
-          totalPages: Math.ceil(
-            totalManuscripts / parseInt(limit as string, 10)
-          ),
-          currentPage: parseInt(page as string, 10),
-          data: manuscripts,
-        });
-        return;
-      }
-
-      const sortObj: Record<string, 1 | -1> = {};
-      sortObj[sort as string] = order === 'asc' ? 1 : -1;
-
-      const options: IPaginationOptions = {
-        page: parseInt(page as string, 10),
-        limit: parseInt(limit as string, 10),
-        sort: sortObj,
-      };
-
-      let manuscripts;
-
-      if (faculty) {
-        // Better approach - aggregate with faculty filter
-        const pipeline: PipelineStage[] = [
-          {
-            $lookup: {
-              from: 'Users',
-              localField: 'submitter',
-              foreignField: '_id',
-              as: 'submitterData',
-            },
-          },
-          {
-            $unwind: '$submitterData',
-          },
+          { $unwind: '$submitterData' },
           {
             $lookup: {
               from: 'Reviews',
@@ -208,47 +181,40 @@ class AdminController {
               as: 'reviews',
             },
           },
+          reviewProcessCompletedStage,
           {
-            $addFields: {
-              assignedReviewerCount: { $size: '$reviews' },
+            $sort: {
+              'submitterData.name': order === 'asc' ? 1 : -1,
+              createdAt: -1,
             },
           },
-          {
-            $match: {
-              ...query,
-              'submitterData.assignedFaculty': faculty, // Match by assignedFaculty
-            },
-          },
-          {
-            $sort: sortObj,
-          },
-          {
-            $skip: (options.page - 1) * options.limit,
-          },
-          {
-            $limit: options.limit,
-          },
+          { $skip: (options.page - 1) * options.limit },
+          { $limit: options.limit },
           {
             $project: {
               _id: 1,
               title: 1,
               status: 1,
               createdAt: 1,
-              updatedAt: 1,
               submitter: {
                 _id: '$submitterData._id',
                 name: '$submitterData.name',
                 email: '$submitterData.email',
                 assignedFaculty: '$submitterData.assignedFaculty',
               },
-              assignedReviewerCount: '$assignedReviewerCount',
+              assignedReviewerCount: { $size: '$reviews' },
+              isReviewProcessCompleted: 1,
             },
           },
         ];
+        countPipeline = [matchStage, { $count: 'total' }];
+      } else {
+        const matchStage: PipelineStage.Match = { $match: query };
+        if (faculty) {
+          matchStage.$match['submitterData.assignedFaculty'] = faculty;
+        }
 
-        manuscripts = await Manuscript.aggregate(pipeline as PipelineStage[]);
-
-        const countPipeline: PipelineStage[] = [
+        pipeline = [
           {
             $lookup: {
               from: 'Users',
@@ -257,56 +223,73 @@ class AdminController {
               as: 'submitterData',
             },
           },
+          { $unwind: '$submitterData' },
           {
-            $unwind: '$submitterData',
-          },
-          {
-            $match: {
-              ...query,
-              'submitterData.assignedFaculty': faculty,
+            $lookup: {
+              from: 'Reviews',
+              localField: '_id',
+              foreignField: 'manuscript',
+              as: 'reviews',
             },
           },
+          reviewProcessCompletedStage,
+          matchStage,
+          { $sort: sortObj },
+          { $skip: (options.page - 1) * options.limit },
+          { $limit: options.limit },
           {
-            $count: 'total',
+            $project: {
+              _id: 1,
+              title: 1,
+              status: 1,
+              createdAt: 1,
+              updatedAt: 1,
+              revisedPdfFile: 1,
+              revisionType: 1,
+              submitter: {
+                _id: '$submitterData._id',
+                name: '$submitterData.name',
+                email: '$submitterData.email',
+                assignedFaculty: '$submitterData.assignedFaculty',
+              },
+              assignedReviewerCount: { $size: '$reviews' },
+              isReviewProcessCompleted: 1,
+            },
           },
         ];
 
-        const totalResult = await Manuscript.aggregate(
-          countPipeline as PipelineStage[]
-        );
-        const totalManuscripts = totalResult[0]?.total || 0;
-
-        logger.info(
-          `Admin ${user.id} retrieved manuscripts list filtered by faculty: ${faculty}`
-        );
-
-        res.status(200).json({
-          success: true,
-          count: manuscripts.length,
-          totalPages: Math.ceil(totalManuscripts / options.limit),
-          currentPage: options.page,
-          data: manuscripts,
-        });
-      } else {
-        manuscripts = await Manuscript.find(query)
-          .sort(sortObj)
-          .skip((options.page - 1) * options.limit)
-          .limit(options.limit)
-          .populate('submitter', 'name email assignedFaculty')
-          .populate('assignedReviewerCount');
-
-        const totalManuscripts = await Manuscript.countDocuments(query);
-
-        logger.info(`Admin ${user.id} retrieved manuscripts list`);
-
-        res.status(200).json({
-          success: true,
-          count: manuscripts.length,
-          totalPages: Math.ceil(totalManuscripts / options.limit),
-          currentPage: options.page,
-          data: manuscripts,
-        });
+        countPipeline = [
+          {
+            $lookup: {
+              from: 'Users',
+              localField: 'submitter',
+              foreignField: '_id',
+              as: 'submitterData',
+            },
+          },
+          { $unwind: '$submitterData' },
+          matchStage,
+          { $count: 'total' },
+        ];
       }
+
+      const manuscripts = await Manuscript.aggregate(pipeline);
+      const totalResult = await Manuscript.aggregate(countPipeline);
+      const totalManuscripts = totalResult[0]?.total || 0;
+
+      logger.info(
+        `Admin ${user.id} retrieved manuscripts list with filters: ${JSON.stringify(
+          req.query
+        )}`
+      );
+
+      res.status(200).json({
+        success: true,
+        count: manuscripts.length,
+        totalPages: Math.ceil(totalManuscripts / options.limit),
+        currentPage: options.page,
+        data: manuscripts,
+      });
     }
   );
 

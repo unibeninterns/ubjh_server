@@ -5,6 +5,7 @@ import publicationController from '../controllers/publication.controller';
 import emailSubscriptionController from '../controllers/emailSubscription.controller';
 import failedJobsController from '../controllers/failedJobs.controller';
 import citationController from '../controllers/citation.controller';
+import articleAnalyticsRoutes from '../../Articles/routes/articleAnalytics.routes';
 import {
   authenticateAdminToken,
   rateLimiter,
@@ -326,5 +327,7 @@ router.get(
   publicRateLimiter,
   citationController.getIndexingMetadata
 );
+
+router.use('/article-analytics', articleAnalyticsRoutes);
 
 export default router;

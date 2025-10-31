@@ -8,6 +8,7 @@ import indexingService from '../Publication/services/indexing.service';
 import emailService from '../services/email.service';
 import logger from '../utils/logger';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 
 dotenv.config();
 
@@ -28,7 +29,7 @@ const agenda = new Agenda({
 // Main publication job - coordinates all sub-jobs
 agenda.define(
   'publish-article',
-  { priority: 'high', concurrency: 2 },
+  { priority: 10, concurrency: 2 },
   async (job: Job<{ articleId: string; pdfPath: string }>) => {
     const { articleId, pdfPath } = job.attrs.data;
 
@@ -53,7 +54,7 @@ agenda.define(
 // DOI Registration Job
 agenda.define(
   'register-doi',
-  { priority: 'high', concurrency: 1 },
+  { priority: 10, concurrency: 1 },
   async (
     job: Job<{ articleId: string; pdfPath: string; failedJobId?: string }>
   ) => {
@@ -77,7 +78,7 @@ agenda.define(
         return;
       }
 
-      const authors = [article.author, ...(article.coAuthors || [])];
+      const authors = [article.author, ...((article.coAuthors as any[]) || [])];
       const volume = article.volume as any;
       const issue = article.issue as any;
 
@@ -152,7 +153,7 @@ agenda.define(
 // Indexing Metadata Generation Job
 agenda.define(
   'generate-indexing-metadata',
-  { priority: 'normal', concurrency: 3 },
+  { priority: 0, concurrency: 3 },
   async (job: Job<{ articleId: string; failedJobId?: string }>) => {
     const { articleId, failedJobId } = job.attrs.data;
 
@@ -169,7 +170,7 @@ agenda.define(
         throw new Error('Article not found');
       }
 
-      const authors = [article.author, ...(article.coAuthors || [])];
+      const authors = [article.author, ...((article.coAuthors as any[]) || [])];
       const volume = article.volume as any;
       const issue = article.issue as any;
 
@@ -244,7 +245,7 @@ agenda.define(
 // Internet Archive Preservation Job
 agenda.define(
   'upload-to-archive',
-  { priority: 'low', concurrency: 1 },
+  { priority: -10, concurrency: 1 },
   async (
     job: Job<{ articleId: string; pdfPath: string; failedJobId?: string }>
   ) => {
@@ -261,7 +262,7 @@ agenda.define(
         throw new Error('Article not found');
       }
 
-      const authors = [article.author, ...(article.coAuthors || [])];
+      const authors = [article.author, ...((article.coAuthors as any[]) || [])];
 
       // Upload to Internet Archive
       const archiveUrl = await internetArchiveService.uploadArticle(
@@ -320,7 +321,7 @@ agenda.define(
 // Email Notification Job
 agenda.define(
   'send-publication-notification',
-  { priority: 'normal', concurrency: 2 },
+  { priority: 0, concurrency: 2 },
   async (job: Job<{ articleId: string; failedJobId?: string }>) => {
     const { articleId, failedJobId } = job.attrs.data;
 
@@ -351,7 +352,7 @@ agenda.define(
                 subscriber.email,
                 article.title,
                 (article.author as any).name,
-                article._id.toString(),
+                (article._id as mongoose.Types.ObjectId).toString(),
                 subscriber.unsubscribeToken || ''
               );
 

@@ -42,16 +42,16 @@ const storage = multer.diskStorage({
   },
 });
 
-// Filter for PDF files only
+// Filter for DOCX files only
 const fileFilter = (
   _req: Request,
   file: Express.Multer.File,
   cb: FileFilterCallback
 ) => {
-  if (file.mimetype === 'application/pdf') {
+  if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only PDF files are allowed.'));
+    cb(new Error('Invalid file type. Only DOCX files are allowed.'));
   }
 };
 
