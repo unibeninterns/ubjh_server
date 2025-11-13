@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
 export const parseManuscriptRequest = (req: Request, res: Response, next: NextFunction) => {
-  if (req.body.keywords && typeof req.body.keywords === 'string') {
+  if (req.body && req.body.keywords && typeof req.body.keywords === 'string') {
     try {
       req.body.keywords = JSON.parse(req.body.keywords);
     } catch (error) {
@@ -9,7 +9,7 @@ export const parseManuscriptRequest = (req: Request, res: Response, next: NextFu
     }
   }
 
-  if (req.body.submitter && typeof req.body.submitter === 'string') {
+  if (req.body && req.body.submitter && typeof req.body.submitter === 'string') {
     try {
       req.body.submitter = JSON.parse(req.body.submitter);
     } catch (error) {
@@ -17,7 +17,7 @@ export const parseManuscriptRequest = (req: Request, res: Response, next: NextFu
     }
   }
 
-  if (req.body.coAuthors && typeof req.body.coAuthors === 'string') {
+  if (req.body && req.body.coAuthors && typeof req.body.coAuthors === 'string') {
     try {
       req.body.coAuthors = JSON.parse(req.body.coAuthors);
     } catch (error) {

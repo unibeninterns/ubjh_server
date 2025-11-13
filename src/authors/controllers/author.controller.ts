@@ -54,6 +54,7 @@ class AuthorController {
           updatedAt: -1,
         })
         .populate('submitter', 'name email')
+        .populate('incompleteCoAuthors', 'name email faculty affiliation orcid')
         .lean();
 
       // Calculate statistics
@@ -107,6 +108,7 @@ class AuthorController {
       // Find the manuscript and verify ownership
       const manuscript = await Manuscript.findById(manuscriptId)
         .populate('submitter coAuthors', 'name email affiliation orcid')
+        .populate('incompleteCoAuthors', 'name email faculty affiliation orcid')
         .lean();
 
       if (!manuscript) {

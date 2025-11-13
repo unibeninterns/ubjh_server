@@ -15,7 +15,7 @@ export const reconciliationAssignmentTemplate = (
             font-weight: bold;
             padding: 10px;
             background-color: #f8e0f5;
-            border-left: 3px solid #AA319A;
+            border-left: 3px solid #7A0019;
             margin: 15px 0;
         }
     </style>

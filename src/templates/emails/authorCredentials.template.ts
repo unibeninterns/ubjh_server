@@ -31,7 +31,7 @@ export const authorCredentialsTemplate = (
         
         <a href="${loginUrl}" class="button">Log In to Portal</a>
         
-        <p>If you have any trouble logging in or did not expect this email, please contact our support team immediately.</p>
+        <p>If you have any trouble logging in or did not expect this email, please contact our support team immediately. Contact support at drid@uniben.edu</p>
     </div>
     
     ${commonFooter}

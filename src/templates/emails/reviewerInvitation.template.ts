@@ -23,7 +23,7 @@ export const reviewerInvitationTemplate = (inviteUrl: string): string => `
         
         <a href="${inviteUrl}" class="button">Accept Invitation & Complete Profile</a>
         
-        <p>This invitation link is valid for 30 days. If you have any questions or are unable to participate at this time, please do not hesitate to contact us.</p>
+        <p>This invitation link is valid for 30 days. If you have any questions or are unable to participate at this time, please do not hesitate to contact us. Contact support at drid@uniben.edu</p>
         
         <p>Thank you for considering this important role. We look forward to your positive response.</p>
     </div>

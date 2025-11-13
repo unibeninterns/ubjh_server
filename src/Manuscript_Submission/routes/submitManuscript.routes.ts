@@ -86,13 +86,25 @@ const submitManuscriptSchema = z.object({
       .array(
         z.object({
           name: z.string().min(1, 'Co-author name is required'),
-          email: z.string().email('Invalid co-author email'),
-          faculty: z.string().min(1, 'Co-author faculty is required'),
-          affiliation: z.string().min(1, 'Co-author affiliation is required'),
-          orcid: z
-            .string()
-            .regex(/^\d{4}-\d{4}-\d{4}-\d{3}[0-9X]$/, 'Invalid ORCID format')
-            .optional(),
+          email: z.preprocess(
+            (val) => (val === '' ? undefined : val),
+            z.string().email('Invalid co-author email').optional()
+          ),
+          faculty: z.preprocess(
+            (val) => (val === '' ? undefined : val),
+            z.string().min(1, 'Co-author faculty is required').optional()
+          ),
+          affiliation: z.preprocess(
+            (val) => (val === '' ? undefined : val),
+            z.string().min(1, 'Co-author affiliation is required').optional()
+          ),
+          orcid: z.preprocess(
+            (val) => (val === '' ? undefined : val),
+            z
+              .string()
+              .regex(/^\d{4}-\d{4}-\d{4}-\d{3}[0-9X]$/, 'Invalid ORCID format')
+              .optional()
+          ),
         })
       )
       .optional(),

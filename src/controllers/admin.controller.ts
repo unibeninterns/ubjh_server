@@ -206,6 +206,8 @@ class AdminController {
               },
               assignedReviewerCount: { $size: '$reviews' },
               isReviewProcessCompleted: 1,
+              originPdfFile: 1,
+              originRevisedPdfFile: 1,
             },
           },
         ];
@@ -256,6 +258,8 @@ class AdminController {
               },
               assignedReviewerCount: { $size: '$reviews' },
               isReviewProcessCompleted: 1,
+              originPdfFile: 1,
+              originRevisedPdfFile: 1,
             },
           },
         ];
@@ -403,7 +407,10 @@ class AdminController {
 
       // Move the old file path to originPdfFile and update the pdfFile with the new path
       manuscript.originPdfFile = manuscript.pdfFile;
-      manuscript.pdfFile = req.file.path;
+      const pdfFile = `${
+        process.env.API_URL || 'http://localhost:3000'
+      }/uploads/documents/${req.file.filename}`;
+      manuscript.pdfFile = pdfFile;
 
       await manuscript.save();
 

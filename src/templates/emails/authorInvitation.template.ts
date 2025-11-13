@@ -23,7 +23,7 @@ export const authorInvitationTemplate = (inviteUrl: string): string => `
         
         <p>This invitation link will expire in 30 days.</p>
         
-        <p>If you have any questions about this invitation, please contact the editorial team.</p>
+        <p>If you have any questions about this invitation, please contact the editorial team. Contact support at drid@uniben.edu.</p>
     </div>
     
     ${commonFooter}

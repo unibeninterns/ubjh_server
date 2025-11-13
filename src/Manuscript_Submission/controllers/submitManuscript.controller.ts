@@ -5,6 +5,7 @@ import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
 import { Types } from 'mongoose';
 import userService from '../../services/user.service';
+import IncompleteCoAuthor from '../models/incompleteCoAuthor.model';
 
 // Interface for the new manuscript submission request
 interface IManuscriptRequest {
@@ -19,10 +20,10 @@ interface IManuscriptRequest {
     orcid?: string;
   }; // Primary author
   coAuthors?: {
-    email: string;
-    name: string;
-    faculty: string;
-    affiliation: string;
+    email?: string;
+    name?: string;
+    faculty?: string;
+    affiliation?: string;
     orcid?: string;
   }[]; // List of co-author emails and names
 }
@@ -87,6 +88,7 @@ class SubmitController {
 
       // Process co-authors
       const coAuthorIds: Types.ObjectId[] = [];
+      const incompleteCoAuthorIds: Types.ObjectId[] = [];
       if (coAuthors && coAuthors.length > 0) {
         for (const coAuthor of coAuthors) {
           // Validate co-author ORCID if provided
@@ -98,15 +100,32 @@ class SubmitController {
             return;
           }
 
-          const coAuthorId = await userService.findOrCreateUser(
-            coAuthor.email,
-            coAuthor.name,
-            coAuthor.faculty || '',
-            coAuthor.affiliation || '',
-            manuscriptId as Types.ObjectId,
-            coAuthor.orcid
-          );
-          coAuthorIds.push(coAuthorId);
+          // Check if co-author is complete
+          if (
+            coAuthor.email &&
+            coAuthor.name &&
+            coAuthor.faculty &&
+            coAuthor.affiliation
+          ) {
+            const coAuthorId = await userService.findOrCreateUser(
+              coAuthor.email,
+              coAuthor.name,
+              coAuthor.faculty,
+              coAuthor.affiliation,
+              manuscriptId as Types.ObjectId,
+              coAuthor.orcid
+            );
+            coAuthorIds.push(coAuthorId);
+          } else {
+            const incompleteCoAuthor = new IncompleteCoAuthor({
+              manuscript: manuscriptId,
+              ...coAuthor,
+            });
+            await incompleteCoAuthor.save();
+            incompleteCoAuthorIds.push(
+              incompleteCoAuthor._id as Types.ObjectId
+            );
+          }
         }
       }
 
@@ -120,6 +139,7 @@ class SubmitController {
         keywords,
         submitter: submitterId,
         coAuthors: coAuthorIds,
+        incompleteCoAuthors: incompleteCoAuthorIds,
         pdfFile,
         originalFilename: req.file.originalname,
         fileSize: req.file.size,
@@ -152,8 +172,6 @@ class SubmitController {
       });
     }
   );
-
-
 }
 
 export default new SubmitController();

@@ -1,4 +1,4 @@
-import { commonStyles, submissionConfirmationFooter } from './styles';
+import { commonStyles, commonFooter } from './styles';
 import { ManuscriptStatus } from '../../Manuscript_Submission/models/manuscript.model';
 
 export const manuscriptStatusUpdateTemplate = (
@@ -69,7 +69,7 @@ export const manuscriptStatusUpdateTemplate = (
         ${bodyContent}
     </div>
     
-    ${submissionConfirmationFooter}
+    ${commonFooter}
 </body>
 </html>
 `;

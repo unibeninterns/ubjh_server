@@ -40,6 +40,7 @@ export interface IManuscript extends Document {
   // Authorship
   submitter: Types.ObjectId; // Reference to User (primary author)
   coAuthors: Types.ObjectId[]; // Co-authors who are also users or will be users as they'll be created as users upon submission
+  incompleteCoAuthors: Types.ObjectId[]; // Co-authors with incomplete information
 
   // Workflow Status
   status: ManuscriptStatus;
@@ -48,6 +49,9 @@ export interface IManuscript extends Document {
 
   // Revision Tracking
   revisedFrom?: Types.ObjectId;
+
+  isArchived?: boolean; // New field for archiving
+  archiveReason?: string; // New field for archiving/unarchiving comments
 
   // Review Results (populated after review completion)
   reviewDecision?: ReviewDecision;
@@ -129,6 +133,12 @@ const ManuscriptSchema: Schema<IManuscript> = new Schema(
         ref: 'User',
       },
     ],
+    incompleteCoAuthors: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'IncompleteCoAuthor',
+      },
+    ],
 
     // Workflow Status
     status: {
@@ -154,6 +164,15 @@ const ManuscriptSchema: Schema<IManuscript> = new Schema(
     revisedFrom: {
       type: Schema.Types.ObjectId,
       ref: 'Manuscript',
+    },
+
+    // Archives management
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
+    archiveReason: {
+      type: String,
     },
 
     // Review Results

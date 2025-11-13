@@ -24,8 +24,6 @@ export const manuscriptNotificationTemplate = (
         <p>Please log in to the portal to review this manuscript at your earliest convenience.</p>
         
         <a href="${reviewUrl}" class="button">Review Manuscript Now</a>
-        
-        <p>For any questions regarding the review process, please contact the Research Directorate.</p>
     </div>
     
     ${commonFooter}

@@ -12,6 +12,8 @@ import Review, {
   ReviewType,
 } from '../../Review_System/models/review.model';
 import mongoose from 'mongoose';
+// import userService from '../../services/user.service';
+// import IncompleteCoAuthor from '../../Manuscript_Submission/models/incompleteCoAuthor.model';
 
 // Interface for the new manuscript submission request
 interface IManuscriptRequest {
@@ -26,10 +28,10 @@ interface IManuscriptRequest {
     orcid?: string;
   }; // Primary author
   coAuthors?: {
-    email: string;
-    name: string;
-    faculty: string;
-    affiliation: string;
+    email?: string;
+    name?: string;
+    faculty?: string;
+    affiliation?: string;
     orcid?: string;
   }[]; // List of co-author emails and names
 }
@@ -49,7 +51,7 @@ class ReviseController {
       res: Response<IManuscriptResponse>
     ): Promise<void> => {
       const { id } = req.params;
-      const { title, abstract, keywords, submitter } = req.body;
+      const { title, abstract, keywords, submitter } = req.body; // add the coAuthors field here if you want that to be part of the request body for revision later in the future
 
       if (!req.file) {
         res.status(400).json({
@@ -96,6 +98,43 @@ class ReviseController {
       originalManuscript.title = title;
       originalManuscript.abstract = abstract;
       originalManuscript.keywords = keywords;
+
+      {
+        /* Process co-authors
+      const coAuthorIds: mongoose.Types.ObjectId[] = [];
+      const incompleteCoAuthorIds: mongoose.Types.ObjectId[] = [];
+      if (coAuthors && coAuthors.length > 0) {
+        for (const coAuthor of coAuthors) {
+          // Check if co-author is complete
+          if (
+            coAuthor.email &&
+            coAuthor.name &&
+            coAuthor.faculty &&
+            coAuthor.affiliation
+          ) {
+            const coAuthorId = await userService.findOrCreateUser(
+              coAuthor.email,
+              coAuthor.name,
+              coAuthor.faculty,
+              coAuthor.affiliation,
+              originalManuscript._id as mongoose.Types.ObjectId,
+              coAuthor.orcid
+            );
+            coAuthorIds.push(coAuthorId);
+          } else {
+            const incompleteCoAuthor = new IncompleteCoAuthor({
+              manuscript: originalManuscript._id,
+              ...coAuthor,
+            });
+            await incompleteCoAuthor.save();
+            incompleteCoAuthorIds.push(incompleteCoAuthor._id);
+          }
+        }
+      }
+
+      originalManuscript.coAuthors = coAuthorIds;
+      originalManuscript.incompleteCoAuthors = incompleteCoAuthorIds; */
+      }
 
       // Reset status to submitted for re-review
       const isMinorRevision = originalManuscript.revisionType === 'minor';
