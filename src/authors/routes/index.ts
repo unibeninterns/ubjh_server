@@ -6,7 +6,7 @@ import coAuthorRoutes from './coAuthor.routes';
 const router = Router();
 
 router.use('/author', authorRoutes);
-router.use('/', reviseManuscriptRoutes);
-router.use('/', coAuthorRoutes);
+router.use('/revise-manuscript', reviseManuscriptRoutes);
+router.use('/co-author', coAuthorRoutes);
 
 export default router;
