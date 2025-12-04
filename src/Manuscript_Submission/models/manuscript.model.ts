@@ -52,6 +52,7 @@ export interface IManuscript extends Document {
 
   isArchived?: boolean; // New field for archiving
   archiveReason?: string; // New field for archiving/unarchiving comments
+  unarchiveReason?: string;
 
   // Review Results (populated after review completion)
   reviewDecision?: ReviewDecision;
@@ -172,6 +173,9 @@ const ManuscriptSchema: Schema<IManuscript> = new Schema(
       default: false,
     },
     archiveReason: {
+      type: String,
+    },
+    unarchiveReason: {
       type: String,
     },
 

@@ -31,7 +31,9 @@ class ReconciliationController {
       const [review1, review2] = reviews;
 
       if (review1.reviewDecision === review2.reviewDecision) {
-        return res.status(200).json({ success: true, message: 'No discrepancy found.' });
+        return res
+          .status(200)
+          .json({ success: true, message: 'No discrepancy found.' });
       }
 
       // Discrepancy found, assign reconciliation reviewer
@@ -41,16 +43,21 @@ class ReconciliationController {
       });
 
       if (existingReconciliation) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: 'A reconciliation review has already been assigned.',
-          });
+        return res.status(400).json({
+          success: false,
+          message: 'A reconciliation review has already been assigned.',
+        });
       }
-      const manuscript = await Manuscript.findById(manuscriptId).populate('submitter');
+      const manuscript =
+        await Manuscript.findById(manuscriptId).populate('submitter');
       if (!manuscript) {
         throw new NotFoundError('Manuscript not found');
+      }
+
+      if (manuscript.isArchived) {
+        throw new BadRequestError(
+          'Cannot assign reconciliation to an archived manuscript.'
+        );
       }
 
       const submitter = manuscript.submitter as any;
@@ -103,7 +110,8 @@ class ReconciliationController {
         message: 'Discrepancy found. Reconciliation reviewer assigned.',
         data: { reconciliationReviewer, dueDate },
       });
-    });
+    }
+  );
 }
 
 export default new ReconciliationController();

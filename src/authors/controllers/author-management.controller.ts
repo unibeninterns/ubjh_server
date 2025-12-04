@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import User, { UserRole } from '../../model/user.model';
-import Manuscript, { IManuscript } from '../../Manuscript_Submission/models/manuscript.model';
+import Manuscript, {
+  IManuscript,
+} from '../../Manuscript_Submission/models/manuscript.model';
 import { BadRequestError, NotFoundError } from '../../utils/customErrors';
 import emailService from '../../services/email.service';
 import generateSecurePassword from '../../utils/passwordGenerator';
@@ -29,9 +31,11 @@ class AuthorManagementController {
         authors.map(async (author) => {
           const mainAuthorCount = await Manuscript.countDocuments({
             submitter: author._id,
+            isArchived: false,
           });
           const coAuthorCount = await Manuscript.countDocuments({
             coAuthors: author._id,
+            isArchived: false,
           });
           return {
             ...author.toObject(),
@@ -83,9 +87,7 @@ class AuthorManagementController {
         generatedPassword
       );
 
-      logger.info(
-        `Admin ${user._id} sent credentials to author ${authorId}`
-      );
+      logger.info(`Admin ${user._id} sent credentials to author ${authorId}`);
 
       res.status(200).json({
         success: true,
@@ -100,8 +102,9 @@ class AuthorManagementController {
       const user = (req as AdminAuthenticatedRequest).user;
       const { authorId } = req.params;
 
-      const author = await User.findById(authorId)
-        .select('-password -refreshToken');
+      const author = await User.findById(authorId).select(
+        '-password -refreshToken'
+      );
 
       if (!author) {
         throw new NotFoundError('Author not found');
@@ -115,7 +118,9 @@ class AuthorManagementController {
       });
 
       const manuscriptsWithRole = manuscripts.map((manuscript) => {
-        const manuscriptObject = manuscript.toObject() as IManuscript & { authorRole?: string };
+        const manuscriptObject = manuscript.toObject() as IManuscript & {
+          authorRole?: string;
+        };
         if (manuscriptObject.submitter.toString() === authorId) {
           manuscriptObject.authorRole = 'main';
         } else {
@@ -124,9 +129,7 @@ class AuthorManagementController {
         return manuscriptObject;
       });
 
-      logger.info(
-        `Admin ${user._id} accessed author ${authorId} details`
-      );
+      logger.info(`Admin ${user._id} accessed author ${authorId} details`);
 
       res.status(200).json({
         success: true,
@@ -173,9 +176,7 @@ class AuthorManagementController {
         generatedPassword
       );
 
-      logger.info(
-        `Admin ${user._id} resent credentials to author ${authorId}`
-      );
+      logger.info(`Admin ${user._id} resent credentials to author ${authorId}`);
 
       res.status(200).json({
         success: true,

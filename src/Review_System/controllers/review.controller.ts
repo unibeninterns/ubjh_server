@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import Review, { ReviewStatus, ReviewType } from '../models/review.model';
-import Manuscript, { ManuscriptStatus } from '../../Manuscript_Submission/models/manuscript.model';
-import { NotFoundError } from '../../utils/customErrors';
+import Manuscript, {
+  ManuscriptStatus,
+} from '../../Manuscript_Submission/models/manuscript.model';
+import { NotFoundError, BadRequestError } from '../../utils/customErrors';
 import asyncHandler from '../../utils/asyncHandler';
 import reconciliationController from './reconciliation.controller';
 
@@ -99,6 +101,11 @@ class ReviewController {
       if (review.reviewType === ReviewType.RECONCILIATION) {
         const manuscript = await Manuscript.findById(review.manuscript);
         if (manuscript) {
+          if (manuscript.isArchived) {
+            throw new BadRequestError(
+              'Cannot submit review for an archived manuscript.'
+            );
+          }
           manuscript.status = ManuscriptStatus.UNDER_REVIEW;
           await manuscript.save();
         }
@@ -188,6 +195,11 @@ class ReviewController {
       }
 
       const manuscript = review.manuscript as any;
+
+      if (manuscript.isArchived) {
+        throw new NotFoundError('Manuscript not found or is archived');
+      }
+
       let previousReview = null;
 
       // If this is a revised manuscript, get the reviewer's previous review
@@ -226,6 +238,11 @@ class ReviewController {
 
       if (!review) {
         throw new NotFoundError('Reconciliation review not found');
+      }
+
+      const manuscript = review.manuscript as any;
+      if (manuscript.isArchived) {
+        throw new NotFoundError('Manuscript not found or is archived');
       }
 
       // Get the two conflicting reviews

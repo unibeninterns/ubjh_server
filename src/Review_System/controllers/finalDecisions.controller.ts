@@ -5,7 +5,11 @@ import Manuscript, {
 } from '../../Manuscript_Submission/models/manuscript.model';
 import Review, { ReviewStatus, ReviewType } from '../models/review.model';
 import Article from '../../Articles/model/article.model';
-import { NotFoundError, UnauthorizedError } from '../../utils/customErrors';
+import {
+  NotFoundError,
+  UnauthorizedError,
+  BadRequestError,
+} from '../../utils/customErrors';
 import asyncHandler from '../../utils/asyncHandler';
 import logger from '../../utils/logger';
 import emailService from '../../services/email.service';
@@ -36,6 +40,7 @@ class DecisionsController {
       }
 
       const manuscripts = await Manuscript.aggregate([
+        { $match: { isArchived: false } },
         {
           $lookup: {
             from: 'Reviews',
@@ -152,9 +157,14 @@ class DecisionsController {
         'submitter coAuthors'
       );
 
-
       if (!manuscript) {
         throw new NotFoundError('Manuscript not found');
+      }
+
+      if (manuscript.isArchived) {
+        throw new BadRequestError(
+          'Cannot update status of an archived manuscript.'
+        );
       }
 
       // For major revisions, store the reviewer who recommended it

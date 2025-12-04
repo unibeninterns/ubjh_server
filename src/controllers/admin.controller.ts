@@ -1,10 +1,16 @@
 /* eslint-disable max-lines */
 import { Request, Response } from 'express';
-import Manuscript, { ManuscriptStatus } from '../Manuscript_Submission/models/manuscript.model';
-import { NotFoundError, UnauthorizedError } from '../utils/customErrors';
+import Manuscript, {
+  ManuscriptStatus,
+} from '../Manuscript_Submission/models/manuscript.model';
+import {
+  NotFoundError,
+  UnauthorizedError,
+  BadRequestError,
+} from '../utils/customErrors';
 import asyncHandler from '../utils/asyncHandler';
 import logger from '../utils/logger';
-import User from '../model/user.model';
+import User, { IUser } from '../model/user.model';
 import Review from '../Review_System/models/review.model';
 import emailService from '../services/email.service';
 import {
@@ -15,6 +21,7 @@ import { PipelineStage } from 'mongoose';
 
 interface IManuscriptQuery {
   status?: string;
+  isArchived?: boolean;
 }
 
 interface IPaginationOptions {
@@ -65,10 +72,17 @@ class AdminController {
         faculty,
         sort = 'createdAt',
         order = 'desc',
+        isArchived,
       } = req.query;
 
       const query: IManuscriptQuery = {};
       if (status) query.status = status as string;
+
+      if (isArchived !== undefined) {
+        query.isArchived = isArchived === 'true';
+      } else {
+        query.isArchived = false;
+      }
 
       const sortObj: Record<string, 1 | -1> = {};
       if (sort !== 'duplicates') {
@@ -122,8 +136,12 @@ class AdminController {
                       { $eq: [{ $size: '$$humanReviews' }, 2] },
                       {
                         $eq: [
-                          { $arrayElemAt: ['$$humanReviews.reviewDecision', 0] },
-                          { $arrayElemAt: ['$$humanReviews.reviewDecision', 1] },
+                          {
+                            $arrayElemAt: ['$$humanReviews.reviewDecision', 0],
+                          },
+                          {
+                            $arrayElemAt: ['$$humanReviews.reviewDecision', 1],
+                          },
                         ],
                       },
                     ],
@@ -500,8 +518,9 @@ class AdminController {
 
       try {
         // Get all submitters who have created manuscripts
-        const manuscriptSubmitters =
-          await Manuscript.find().distinct('submitter');
+        const manuscriptSubmitters = await Manuscript.find({
+          isArchived: false,
+        }).distinct('submitter');
 
         // Find users who submitted manuscripts and get their distinct assigned faculties
         const assignedFaculties = await User.find({
@@ -616,9 +635,7 @@ class AdminController {
         });
         await review.save();
 
-        const reviewer = await User.findById(
-          manuscript.originalReviewer
-        );
+        const reviewer = await User.findById(manuscript.originalReviewer);
         if (reviewer) {
           try {
             await emailService.sendReviewAssignmentEmail(
@@ -640,6 +657,93 @@ class AdminController {
         message: 'Manuscript edited successfully and assigned for review.',
         data: {
           manuscriptId: (manuscript._id as any).toString(),
+        },
+      });
+    }
+  );
+
+  toggleManuscriptArchiveStatus = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const user = (req as AdminAuthenticatedRequest).user;
+      if (user.role !== 'admin') {
+        throw new UnauthorizedError(
+          'You do not have permission to perform this action'
+        );
+      }
+
+      const { id } = req.params;
+      const { archiveReason, unarchiveReason } = req.body;
+
+      const manuscript = await Manuscript.findById(id).populate(
+        'submitter',
+        'name email'
+      );
+
+      if (!manuscript) {
+        throw new NotFoundError('Manuscript not found');
+      }
+
+      const wasArchived = manuscript.isArchived;
+      manuscript.isArchived = !manuscript.isArchived;
+
+      if (manuscript.isArchived) {
+        if (!archiveReason) {
+          throw new BadRequestError(
+            'Archive reason is required when archiving.'
+          );
+        }
+        manuscript.archiveReason = archiveReason;
+        manuscript.unarchiveReason = undefined; // Clear unarchive reason
+      } else {
+        if (!unarchiveReason) {
+          throw new BadRequestError(
+            'Unarchive reason is required when un-archiving.'
+          );
+        }
+        manuscript.unarchiveReason = unarchiveReason;
+        manuscript.archiveReason = undefined; // Clear archive reason
+      }
+
+      await manuscript.save();
+
+      // Send email notification
+      if (
+        manuscript.submitter &&
+        typeof manuscript.submitter === 'object' &&
+        'email' in manuscript.submitter
+      ) {
+        try {
+          const submitter = manuscript.submitter as unknown as IUser;
+          await emailService.sendManuscriptArchiveNotificationEmail(
+            submitter.email,
+            submitter.name,
+            manuscript.title,
+            manuscript.isArchived,
+            manuscript.isArchived
+              ? manuscript.archiveReason
+              : manuscript.unarchiveReason
+          );
+        } catch (error) {
+          logger.error(
+            `Failed to send manuscript archive notification email for manuscript ${id}:`,
+            error
+          );
+          // Decide if you want to throw an error or just log it
+        }
+      }
+
+      const message = wasArchived
+        ? 'Manuscript has been un-archived.'
+        : 'Manuscript has been archived.';
+
+      logger.info(`Admin ${user.id} ${message.toLowerCase()} manuscript ${id}`);
+
+      res.status(200).json({
+        success: true,
+        message,
+        data: {
+          manuscriptId: manuscript._id,
+          isArchived: manuscript.isArchived,
         },
       });
     }

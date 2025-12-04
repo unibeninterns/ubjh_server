@@ -288,7 +288,9 @@ class ReviewerController {
 
           // Calculate completion rate
           const completionRate =
-            assignedReviewsCount > 0 ? Math.round((completedReviewsCount / assignedReviewsCount) * 100) : 0;
+            assignedReviewsCount > 0
+              ? Math.round((completedReviewsCount / assignedReviewsCount) * 100)
+              : 0;
 
           return {
             ...reviewer.toObject(),
@@ -454,7 +456,9 @@ class ReviewerController {
         created: invitation.createdAt.toISOString().split('T')[0],
         assignedFaculty: invitation.assignedFaculty ?? null,
         assignedReviews: invitation.assignedReviews ?? null,
-        expires: invitation.inviteTokenExpires ? invitation.inviteTokenExpires.toISOString().split('T')[0] : null,
+        expires: invitation.inviteTokenExpires
+          ? invitation.inviteTokenExpires.toISOString().split('T')[0]
+          : null,
       }));
 
       logger.info(`Admin ${user._id} retrieved reviewer invitations list`);
@@ -539,6 +543,7 @@ class ReviewerController {
       // Get assigned journals with details
       const assignedReviews = await Manuscript.find({
         _id: { $in: reviewer.assignedReviews },
+        isArchived: false,
       })
         .populate('submitter', 'name email')
         .select('-pdfFile');

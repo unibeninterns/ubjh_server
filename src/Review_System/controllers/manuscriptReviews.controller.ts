@@ -1,4 +1,3 @@
- 
 import { Request, Response, NextFunction } from 'express';
 import Review, { ReviewType, ReviewStatus } from '../models/review.model';
 import Manuscript from '../../Manuscript_Submission/models/manuscript.model';
@@ -294,6 +293,7 @@ class ManuscriptReviewsController {
       const user = (req as AuthenticatedRequest).user;
 
       const manuscriptsWithReviews = await Manuscript.aggregate([
+        { $match: { isArchived: false } },
         {
           $lookup: {
             from: 'Reviews',
@@ -324,7 +324,8 @@ class ManuscriptReviewsController {
           ['approved', 'rejected', 'minor_revision', 'major_revision'].includes(
             manuscript.status
           )
-        ) reviewed++;
+        )
+          reviewed++;
         if (manuscript.status === 'in_reconciliation') inReconciliation++;
 
         const humanReviews = manuscript.reviews.filter(
@@ -382,10 +383,12 @@ class ManuscriptReviewsController {
       dueDate: review.dueDate,
       completedAt: review.completedAt,
       createdAt: review.createdAt,
-      reviewer: review.reviewer ? {
-        name: review.reviewer.name,
-        email: review.reviewer.email,
-      } : null,
+      reviewer: review.reviewer
+        ? {
+            name: review.reviewer.name,
+            email: review.reviewer.email,
+          }
+        : null,
     };
   };
 }

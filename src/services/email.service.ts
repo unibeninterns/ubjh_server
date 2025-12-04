@@ -357,6 +357,41 @@ class EmailService {
       throw error;
     }
   }
+
+  async sendManuscriptArchiveNotificationEmail(
+    to: string,
+    name: string,
+    manuscriptTitle: string,
+    isArchived: boolean,
+    reason?: string
+  ): Promise<void> {
+    const subject = isArchived
+      ? `Your Manuscript "${manuscriptTitle}" Has Been Archived`
+      : `Your Manuscript "${manuscriptTitle}" Has Been Unarchived`;
+
+    try {
+      await this.transporter.sendMail({
+        from: this.emailFrom,
+        to,
+        subject,
+        html: manuscriptArchiveNotificationTemplate(
+          name,
+          manuscriptTitle,
+          isArchived,
+          reason
+        ),
+      });
+      logger.info(
+        `${isArchived ? 'Archive' : 'Unarchive'} notification email sent to: ${to} for manuscript ${manuscriptTitle}`
+      );
+    } catch (error) {
+      logger.error(
+        `Failed to send ${isArchived ? 'archive' : 'unarchive'} notification email to ${to} for manuscript ${manuscriptTitle}:`,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      throw error;
+    }
+  }
 }
 
 export default new EmailService();

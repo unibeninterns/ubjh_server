@@ -1,4 +1,3 @@
- 
 import { Request, Response } from 'express';
 import User, { UserRole, IUser } from '../../model/user.model';
 import Manuscript, {
@@ -50,7 +49,11 @@ interface PopulatedReview extends Omit<IReview, 'manuscript' | 'reviewer'> {
 class AssignReviewController {
   assignReviewer = asyncHandler(
     async (
-      req: Request<{ manuscriptId: string }, {}, { assignmentType: 'automatic' | 'manual', reviewerId?: string }>,
+      req: Request<
+        { manuscriptId: string },
+        {},
+        { assignmentType: 'automatic' | 'manual'; reviewerId?: string }
+      >,
       res: Response<IAssignReviewResponse>
     ): Promise<void> => {
       const { manuscriptId } = req.params;
@@ -65,6 +68,12 @@ class AssignReviewController {
         throw new NotFoundError('Manuscript not found');
       }
 
+      if (manuscript.isArchived) {
+        throw new BadRequestError(
+          'Cannot assign reviewer to an archived manuscript.'
+        );
+      }
+
       const existingReviews = await Review.find({ manuscript: manuscriptId });
       if (existingReviews.length >= 2) {
         throw new BadRequestError('Manuscript already has two reviewers.');
@@ -74,31 +83,42 @@ class AssignReviewController {
 
       if (assignmentType === 'manual') {
         if (!reviewerId) {
-          throw new BadRequestError('Reviewer ID is required for manual assignment.');
+          throw new BadRequestError(
+            'Reviewer ID is required for manual assignment.'
+          );
         }
         selectedReviewer = await User.findById(reviewerId);
         if (!selectedReviewer) {
           throw new NotFoundError('Selected reviewer not found.');
         }
-        const selectedReviewerId: Types.ObjectId = selectedReviewer!._id as Types.ObjectId;
-        if (existingReviews.some(r => r.reviewer.equals(selectedReviewerId))) {
-          throw new BadRequestError('This reviewer is already assigned to this manuscript.');
+        const selectedReviewerId: Types.ObjectId = selectedReviewer!
+          ._id as Types.ObjectId;
+        if (
+          existingReviews.some((r) => r.reviewer.equals(selectedReviewerId))
+        ) {
+          throw new BadRequestError(
+            'This reviewer is already assigned to this manuscript.'
+          );
         }
-
-      } else { // Automatic assignment
+      } else {
+        // Automatic assignment
         const submitter = manuscript.submitter as any;
         const submitterFaculty = submitter.assignedFaculty;
 
         if (!submitterFaculty) {
-          throw new BadRequestError('Cannot assign reviewers: Submitter has no assigned faculty.');
+          throw new BadRequestError(
+            'Cannot assign reviewers: Submitter has no assigned faculty.'
+          );
         }
 
         const eligibleFaculties = getEligibleFaculties(submitterFaculty);
         if (eligibleFaculties.length === 0) {
-          throw new BadRequestError('Cannot assign reviewers: No eligible faculties found for the manuscript\'s cluster');
+          throw new BadRequestError(
+            "Cannot assign reviewers: No eligible faculties found for the manuscript's cluster"
+          );
         }
 
-        const existingReviewerIds = existingReviews.map(r => r.reviewer);
+        const existingReviewerIds = existingReviews.map((r) => r.reviewer);
 
         const eligibleReviewers = await User.aggregate<IReviewerWithCounts>([
           {
@@ -107,7 +127,7 @@ class AssignReviewController {
               role: UserRole.REVIEWER, // No admins in automatic assignment
               isActive: true,
               invitationStatus: { $in: ['accepted', 'added'] },
-              _id: { $nin: existingReviewerIds }
+              _id: { $nin: existingReviewerIds },
             },
           },
           {
@@ -149,16 +169,18 @@ class AssignReviewController {
               _id: 1,
             },
           },
-          { $limit: 1 }
+          { $limit: 1 },
         ]);
 
         if (eligibleReviewers.length === 0) {
           // Return eligible reviewers for manual assignment
-          const allEligible = await this.getEligibleReviewersForManuscript(manuscriptId);
+          const allEligible =
+            await this.getEligibleReviewersForManuscript(manuscriptId);
           res.status(400).json({
             success: false,
-            message: 'Could not find an eligible reviewer automatically. Please select one manually.',
-            data: { eligibleReviewers: allEligible }
+            message:
+              'Could not find an eligible reviewer automatically. Please select one manually.',
+            data: { eligibleReviewers: allEligible },
           });
           return;
         }
@@ -222,8 +244,13 @@ class AssignReviewController {
   );
 
   getEligibleReviewers = asyncHandler(
-    async (req: Request<{ manuscriptId: string }>, res: Response): Promise<void> => {
-      const reviewers = await this.getEligibleReviewersForManuscript(req.params.manuscriptId);
+    async (
+      req: Request<{ manuscriptId: string }>,
+      res: Response
+    ): Promise<void> => {
+      const reviewers = await this.getEligibleReviewersForManuscript(
+        req.params.manuscriptId
+      );
       res.status(200).json({
         success: true,
         data: reviewers,
@@ -231,16 +258,24 @@ class AssignReviewController {
     }
   );
 
-  private async getEligibleReviewersForManuscript(manuscriptId: string): Promise<IUser[]> {
-    const manuscript = await Manuscript.findById(manuscriptId).populate('submitter');
+  private async getEligibleReviewersForManuscript(
+    manuscriptId: string
+  ): Promise<IUser[]> {
+    const manuscript =
+      await Manuscript.findById(manuscriptId).populate('submitter');
     if (!manuscript) {
       throw new NotFoundError('Manuscript not found');
+    }
+    if (manuscript.isArchived) {
+      throw new NotFoundError('Manuscript not found or is archived');
     }
 
     const submitter = manuscript.submitter as any;
     const eligibleFaculties = getEligibleFaculties(submitter.assignedFaculty);
 
-    const existingReviewerIds = (await Review.find({ manuscript: manuscriptId })).map(r => r.reviewer);
+    const existingReviewerIds = (
+      await Review.find({ manuscript: manuscriptId })
+    ).map((r) => r.reviewer);
 
     // Eligible reviewers (non-admins)
     const eligibleReviewers = await User.find({
@@ -251,7 +286,11 @@ class AssignReviewController {
     });
 
     // Admins can also be manually assigned
-    const adminReviewers = await User.find({ role: UserRole.ADMIN, isActive: true, _id: { $nin: existingReviewerIds } });
+    const adminReviewers = await User.find({
+      role: UserRole.ADMIN,
+      isActive: true,
+      _id: { $nin: existingReviewerIds },
+    });
 
     return [...eligibleReviewers, ...adminReviewers];
   }

@@ -56,7 +56,10 @@ const fileFilter = (
   file: Express.Multer.File,
   cb: FileFilterCallback
 ) => {
-  if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+  if (
+    file.mimetype ===
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ) {
     cb(null, true);
   } else {
     cb(new Error('Invalid file type. Only DOCX files are allowed.'));
@@ -131,6 +134,13 @@ router.put(
   adminRateLimiter,
   manuscriptUpload,
   adminController.editRevisedManuscript
+);
+
+router.patch(
+  '/manuscripts/:id/archive',
+  authenticateAdminToken,
+  adminRateLimiter,
+  adminController.toggleManuscriptArchiveStatus
 );
 
 router.use('/author-management', authorManagementRoutes);

@@ -46,6 +46,11 @@ class ReassignReviewController {
       if (!manuscript) {
         throw new NotFoundError('Manuscript not found for this review');
       }
+      if (manuscript.isArchived) {
+        throw new BadRequestError(
+          'Cannot reassign review for an archived manuscript.'
+        );
+      }
 
       const oldReviewerId = review.reviewer;
       let newReviewer: IUser | null = null;
@@ -150,6 +155,9 @@ class ReassignReviewController {
     if (!manuscript) {
       throw new NotFoundError('Manuscript not found');
     }
+    if (manuscript.isArchived) {
+      throw new NotFoundError('Manuscript not found or is archived');
+    }
     const submitter = manuscript.submitter as any;
     const eligibleFaculties = getEligibleFaculties(submitter.assignedFaculty);
     const existingReviewerIds = (
@@ -179,6 +187,9 @@ class ReassignReviewController {
     if (!manuscript) {
       throw new NotFoundError('Manuscript not found');
     }
+    if (manuscript.isArchived) {
+      throw new NotFoundError('Manuscript not found or is archived');
+    }
     const reviews = await Review.find({ manuscript: manuscriptId }).populate(
       'reviewer',
       'name email role'
@@ -206,6 +217,9 @@ class ReassignReviewController {
         await Manuscript.findById(manuscriptId).populate('originalReviewer');
       if (!manuscript) {
         throw new NotFoundError('Manuscript not found');
+      }
+      if (manuscript.isArchived) {
+        throw new NotFoundError('Manuscript not found or is archived');
       }
 
       // For revised manuscripts, only show admin and original reviewer
