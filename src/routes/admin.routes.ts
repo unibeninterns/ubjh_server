@@ -18,8 +18,8 @@ const router = express.Router();
 
 const getUploadsPath = (): string => {
   if (process.env.NODE_ENV === 'production') {
-    // Go up to dist/ and then to uploads/documents
-    return path.join(__dirname, '..', '..', 'uploads', 'documents');
+    // In production, save to dist/uploads/documents
+    return path.join(__dirname, '..', 'uploads', 'documents');
   } else {
     // In development, use the existing path
     return path.join(process.cwd(), 'src', 'uploads', 'documents');
