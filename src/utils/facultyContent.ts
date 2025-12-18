@@ -45,6 +45,16 @@ export const humanitiesFaculties: FacultyMap = {
     'Department of Social Work',
     'Institute of Public Administration and Health Services Management',
   ],
+  'Faculty of Management Science': [
+    'Department of Accounting',
+    'Department of Banking and Finance',
+    'Department of Marketing',
+    'Department of Insurance',
+    'Department of Actuarial Science',
+    'Department of Business Administration',
+    'Department of Entrepreneurship',
+    'Department of Taxation',
+  ],
 };
 
 export const manuscriptConfig = {
