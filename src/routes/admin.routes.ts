@@ -13,6 +13,7 @@ import finalDecisionsRoutes from '../Review_System/routes/finalDecisions.routes'
 import adminReviewRoutes from '../Review_System/routes/adminReview.routes';
 import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
+import dynamicEmailController from '../controllers/admin/dynamicEmail.controller';
 
 const router = express.Router();
 
@@ -149,5 +150,26 @@ router.use('/reassign-review', reassignReviewRoutes);
 router.use('/manuscript-reviews', manuscriptReviewsRoutes);
 router.use('/decisions', finalDecisionsRoutes);
 router.use('/', adminReviewRoutes);
+
+router.get(
+  '/campaign/recipients',
+  authenticateAdminToken,
+  adminRateLimiter,
+  dynamicEmailController.getRecipients
+);
+
+router.post(
+  '/campaign/preview',
+  authenticateAdminToken,
+  adminRateLimiter,
+  dynamicEmailController.previewEmail
+);
+
+router.post(
+  '/campaign/send',
+  authenticateAdminToken,
+  adminRateLimiter,
+  dynamicEmailController.sendCampaign
+);
 
 export default router;

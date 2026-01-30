@@ -392,6 +392,28 @@ class EmailService {
       throw error;
     }
   }
+
+  async sendDynamicEmail(
+    to: string,
+    subject: string,
+    htmlContent: string
+  ): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: this.emailFrom,
+        to,
+        subject,
+        html: htmlContent,
+      });
+      logger.info(`Dynamic email sent to: ${to}`);
+    } catch (error) {
+      logger.error(
+        'Failed to send dynamic email:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      throw error;
+    }
+  }
 }
 
 export default new EmailService();
