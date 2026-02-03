@@ -748,6 +748,88 @@ class AdminController {
       });
     }
   );
+
+  searchManuscripts = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const user = (req as AdminAuthenticatedRequest).user;
+      if (user.role !== 'admin') {
+        throw new UnauthorizedError(
+          'You do not have permission to access this resource'
+        );
+      }
+
+      const { query, limit = 20 } = req.query;
+
+      if (!query || typeof query !== 'string' || query.trim().length < 2) {
+        res.status(400).json({
+          success: false,
+          message: 'Search query must be at least 2 characters',
+          data: [],
+        });
+        return;
+      }
+
+      const searchRegex = new RegExp(query.trim(), 'i');
+
+      // Search in manuscripts (title) and populate submitter info
+      const manuscripts = await Manuscript.find({
+        $or: [{ title: searchRegex }],
+        isArchived: false,
+      })
+        .populate('submitter', 'name email assignedFaculty')
+        .limit(parseInt(limit as string, 10))
+        .select('_id title status createdAt submitter')
+        .lean();
+
+      // Also search for users (authors) and get their manuscripts
+      const users = await User.find({
+        $or: [{ name: searchRegex }, { email: searchRegex }],
+        role: 'author',
+      })
+        .select('_id name email assignedFaculty')
+        .limit(parseInt(limit as string, 10))
+        .lean();
+
+      // Get manuscripts for matched users
+      const userManuscripts = await Manuscript.find({
+        submitter: { $in: users.map((u) => u._id) },
+        isArchived: false,
+      })
+        .populate('submitter', 'name email assignedFaculty')
+        .select('_id title status createdAt submitter')
+        .limit(parseInt(limit as string, 10))
+        .lean();
+
+      // Combine and deduplicate results
+      const allManuscripts = [...manuscripts, ...userManuscripts];
+      const uniqueManuscripts = Array.from(
+        new Map(allManuscripts.map((m) => [m._id.toString(), m])).values()
+      );
+
+      // Get review counts for each manuscript
+      const manuscriptsWithReviews = await Promise.all(
+        uniqueManuscripts.map(async (manuscript) => {
+          const reviewCount = await Review.countDocuments({
+            manuscript: manuscript._id,
+          });
+          return {
+            ...manuscript,
+            assignedReviewerCount: reviewCount,
+          };
+        })
+      );
+
+      logger.info(
+        `Admin ${user.id} performed search: "${query}" - ${manuscriptsWithReviews.length} results`
+      );
+
+      res.status(200).json({
+        success: true,
+        count: manuscriptsWithReviews.length,
+        data: manuscriptsWithReviews,
+      });
+    }
+  );
 }
 
 export default new AdminController();

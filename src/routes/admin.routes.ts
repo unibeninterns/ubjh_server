@@ -228,4 +228,11 @@ router.post(
   dynamicEmailController.sendCampaign
 );
 
+router.get(
+  '/manuscripts/search',
+  authenticateAdminToken,
+  adminRateLimiter,
+  adminController.searchManuscripts
+);
+
 export default router;
