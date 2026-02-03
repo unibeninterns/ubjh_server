@@ -108,17 +108,35 @@ class DynamicEmailController {
   // Preview email with dynamic variables
   previewEmail = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { recipientIds, subject, headerTitle, bodyContent } = req.body;
+      let { recipientIds, subject, headerTitle, bodyContent } = req.body;
       const attachments = req.files as Express.Multer.File[] | undefined;
 
-      if (!recipientIds || recipientIds.length === 0) {
+      // Robustly handle recipientIds (could be string or array from FormData)
+      let ids: string[] = [];
+      if (typeof recipientIds === 'string') {
+        try {
+          ids = JSON.parse(recipientIds);
+        } catch (e) {
+          ids = recipientIds.split(',').map((id: string) => id.trim());
+        }
+      } else if (Array.isArray(recipientIds)) {
+        ids = recipientIds;
+      }
+
+      if (ids.length === 0) {
         throw new BadRequestError(
           'At least one recipient is required for preview'
         );
       }
 
       // Get first recipient for preview
-      const firstRecipientId = recipientIds[0];
+      const firstRecipientId = ids[0];
+      
+      // Ensure it's a valid MongoDB ID format before querying
+      if (!firstRecipientId.match(/^[0-9a-fA-F]{24}$/)) {
+        throw new BadRequestError(`Invalid recipient ID format: ${firstRecipientId}`);
+      }
+
       const user = await User.findById(firstRecipientId).lean();
 
       if (!user) {
@@ -172,10 +190,22 @@ class DynamicEmailController {
   sendCampaign = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const adminUser = (req as AdminAuthenticatedRequest).user;
-      const { recipientIds, subject, headerTitle, bodyContent } = req.body;
+      let { recipientIds, subject, headerTitle, bodyContent } = req.body;
       const attachments = req.files as Express.Multer.File[] | undefined;
 
-      if (!recipientIds || recipientIds.length === 0) {
+      // Robustly handle recipientIds (could be string or array from FormData)
+      let ids: string[] = [];
+      if (typeof recipientIds === 'string') {
+        try {
+          ids = JSON.parse(recipientIds);
+        } catch (e) {
+          ids = recipientIds.split(',').map((id: string) => id.trim());
+        }
+      } else if (Array.isArray(recipientIds)) {
+        ids = recipientIds;
+      }
+
+      if (ids.length === 0) {
         throw new BadRequestError('At least one recipient is required');
       }
 
@@ -193,7 +223,7 @@ class DynamicEmailController {
 
       // Get all recipients
       const users = await User.find({
-        _id: { $in: recipientIds },
+        _id: { $in: ids },
       }).lean();
 
       const results = {

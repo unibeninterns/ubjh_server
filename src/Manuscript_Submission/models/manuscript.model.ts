@@ -62,6 +62,16 @@ export interface IManuscript extends Document {
   };
   reviewedAt?: Date;
 
+  // Audit Trail for Admin Overrides
+  overrideHistory?: Array<{
+    adminId: Types.ObjectId;
+    fromStatus: string;
+    toStatus: string;
+    reason: string;
+    timestamp: Date;
+    silentUpdate: boolean;
+  }>;
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -200,6 +210,21 @@ const ManuscriptSchema: Schema<IManuscript> = new Schema(
     reviewedAt: {
       type: Date,
     },
+
+    // Audit Trail for Admin Overrides
+    overrideHistory: [
+      {
+        adminId: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        fromStatus: String,
+        toStatus: String,
+        reason: String,
+        timestamp: Date,
+        silentUpdate: Boolean,
+      },
+    ],
 
     // Timestamps
     createdAt: {
