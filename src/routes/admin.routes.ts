@@ -13,6 +13,7 @@ import finalDecisionsRoutes from '../Review_System/routes/finalDecisions.routes'
 import adminReviewRoutes from '../Review_System/routes/adminReview.routes';
 import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
+import fs from 'fs';
 import dynamicEmailController from '../controllers/admin/dynamicEmail.controller';
 
 const router = express.Router();
@@ -34,7 +35,11 @@ const storage = multer.diskStorage({
     _file: Express.Multer.File,
     cb: (error: Error | null, destination: string) => void
   ) {
-    cb(null, getUploadsPath());
+    const dest = getUploadsPath();
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(dest, { recursive: true });
+    }
+    cb(null, dest);
   },
   filename: function (
     _req: Request,
@@ -77,15 +82,23 @@ const upload = multer({
 // Middleware for handling the single manuscript file upload
 const manuscriptUpload = upload.single('file');
 
+const getEmailAttachmentsPath = (): string => {
+  if (process.env.NODE_ENV === 'production') {
+    // Relative to dist/routes/
+    return path.join(__dirname, '..', 'uploads', 'email-attachments');
+  } else {
+    // Relative to project root
+    return path.join(process.cwd(), 'src', 'uploads', 'email-attachments');
+  }
+};
+
 // Add multer configuration for email attachments
 const emailAttachmentStorage = multer.diskStorage({
   destination: function (_req, _file, cb) {
-    const uploadPath = path.join(
-      process.cwd(),
-      'src',
-      'uploads',
-      'email-attachments'
-    );
+    const uploadPath = getEmailAttachmentsPath();
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
     cb(null, uploadPath);
   },
   filename: function (_req, file, cb) {
