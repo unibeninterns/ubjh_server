@@ -154,6 +154,13 @@ router.get(
 );
 
 router.get(
+  '/manuscripts/search',
+  authenticateAdminToken,
+  adminRateLimiter,
+  adminController.searchManuscripts
+);
+
+router.get(
   '/manuscripts/:id',
   authenticateAdminToken,
   adminRateLimiter,
@@ -239,13 +246,6 @@ router.post(
   adminRateLimiter,
   emailAttachmentUpload.array('attachments', 5),
   dynamicEmailController.sendCampaign
-);
-
-router.get(
-  '/manuscripts/search',
-  authenticateAdminToken,
-  adminRateLimiter,
-  adminController.searchManuscripts
 );
 
 export default router;
