@@ -393,7 +393,7 @@ class EmailService {
     }
   }
 
-  // Update the sendDynamicEmail method signature
+  // sendDynamicEmail method signature
   async sendDynamicEmail(
     to: string,
     subject: string,
